@@ -7,6 +7,7 @@ import Http
 import Lamdera exposing (sendToBackend)
 import Types exposing (..)
 import Html.Events exposing (onInput)
+import Html.Attributes exposing (type_)
 
 
 type alias Model =
@@ -90,7 +91,7 @@ updateFromBackend msg model =
 
         AccountInfoFailure err ->
             let
-                error = 
+                _ = 
                     case err of 
                         Http.BadUrl url ->
                             Debug.log "BadUrl" url
@@ -109,7 +110,7 @@ updateFromBackend msg model =
             in
                 ( model, Cmd.none )
 
-        AccountInfoSuccess acc ->
+        AccountInfoSuccess _ ->
             ( model, Cmd.none )
         
 

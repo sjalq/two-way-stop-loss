@@ -3,7 +3,6 @@ module Backend exposing (app, init)
 import Lamdera exposing (ClientId, SessionId, broadcast, sendToFrontend)
 import Set exposing (Set)
 import Types exposing (..)
-import Crypto.Hash
 import Binance exposing (..)
 import Html exposing (time)
 import PrivateConfig
@@ -27,6 +26,7 @@ init : ( Model, Cmd BackendMsg )
 init =
     ( { counter = 0 
       , apiConnection = PrivateConfig.apiConnection
+      , positionConfig = Nothing
       }
     , Cmd.none )
 

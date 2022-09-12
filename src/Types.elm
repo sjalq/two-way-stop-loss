@@ -4,15 +4,32 @@ import Lamdera exposing (ClientId, SessionId)
 import Set exposing (Set)
 import BinanceDecoder exposing (..)
 import Http exposing (Error)
+-- import Numeric.Decimal as Decimal exposing (Decimal)
+import Decimal exposing (..)
 
 type alias ApiConnection =
     { key : String
     , secret : String
     }
 
+type alias Asset = String
+
+type alias StopOrder = 
+    { triggerPrice : Decimal
+    , price : Decimal
+    }
+
+type alias PositionConfig = 
+    { asset : Asset
+    , denominatingAsset : Asset
+    , downStop : StopOrder
+    , upStop : StopOrder
+    }
+
 type alias BackendModel =
     { counter : Int
     , apiConnection : ApiConnection
+    , positionConfig : Maybe PositionConfig
     }
 
 
