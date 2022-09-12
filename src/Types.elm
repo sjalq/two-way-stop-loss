@@ -16,8 +16,9 @@ type alias Asset = String
 
 type alias StopOrder = 
     { triggerPrice : Decimal
-    , price : Decimal
+    , limitPrice : Decimal
     }
+
 
 type alias PositionConfig = 
     { asset : Asset
@@ -26,10 +27,11 @@ type alias PositionConfig =
     , upStop : StopOrder
     }
 
+
 type alias BackendModel =
     { counter : Int
     , apiConnection : ApiConnection
-    , positionConfig : Maybe PositionConfig
+    , positionConfig : Maybe PositionConfig -- initially assumes only 1 position with 100% of the funds
     }
 
 
@@ -37,6 +39,7 @@ type alias FrontendModel =
     { counter : Int
     , clientId : String
     , apiConnection : ApiConnection
+    , positionConfig : Maybe PositionConfig
     }
     
 
@@ -46,6 +49,13 @@ type FrontendMsg
     | KeyChanged String
     | SecretChanged String
     | ChangeApiConnection
+    | AssetChanged String
+    | DenominatingAssetChanged String
+    | DownTriggerPriceChanged String
+    | DownLimitPriceChanged String
+    | UpTriggerPriceChanged String
+    | UpLimitPriceChanged String
+    | ChangePositionConfig
     | FNoop
 
 
@@ -53,6 +63,7 @@ type ToBackend
     = CounterIncremented
     | CounterDecremented
     | ApiConnectionChanged ApiConnection
+    | PositionConfigChanged PositionConfig
 
 
 type BackendMsg
@@ -65,5 +76,6 @@ type BackendMsg
 type ToFrontend
     = CounterNewValue Int String
     | NewApiConnection ApiConnection
+    | NewPositionConfig PositionConfig
     | AccountInfoSuccess AccountInfo
     | AccountInfoFailure Http.Error

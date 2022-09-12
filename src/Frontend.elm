@@ -8,6 +8,10 @@ import Lamdera exposing (sendToBackend)
 import Types exposing (..)
 import Html.Events exposing (onInput)
 import Html.Attributes exposing (type_)
+import Types exposing (FrontendMsg(..))
+import Helpers
+import Helpers exposing (..)
+import Decimal exposing (Decimal)
 
 
 type alias Model =
@@ -41,7 +45,8 @@ init =
     ( { counter = 0
     , clientId = ""
     , apiConnection = { key = ""
-                      , secret = "" } }
+                      , secret = "" }
+    , positionConfig = Nothing }
     , Cmd.none )
 
 
@@ -116,16 +121,42 @@ updateFromBackend msg model =
 
 view : Model -> Html FrontendMsg
 view model =
+    let
+        apiView = 
+            Html.div 
+                [] 
+                [ Html.text "API Connection"
+                , Html.input [ onInput KeyChanged ] [  ] 
+                , Html.input [ onInput SecretChanged ] [  ]
+                , Html.div [] [ Html.text model.apiConnection.key ]
+                , Html.div [] [ Html.text model.apiConnection.secret ]
+                , Html.button [ onClick ChangeApiConnection ] [ text "Update API Connection" ]
+                ]
+
+        positionConfigView = 
+            Html.div
+                []
+                [ Html.text "Position Config"
+                , Html.input [ onInput AssetChanged ] [] 
+                , Html.input [ onInput DenominatingAssetChanged ] []
+                , Html.div [] [ model.positionConfig |> mapWithDefault .asset "" |> Html.text ]
+                , Html.div [] [ model.positionConfig |> mapWithDefault .denominatingAsset "" |> Html.text ]
+                , Html.input [ onInput DownTriggerPriceChanged ] []
+                , Html.input [ onInput DownLimitPriceChanged ] []
+                , Html.div [] [ model.positionConfig |> mapToDecimalStringOrZero (.downStop >> .triggerPrice) |> Html.text ]
+                , Html.div [] [ model.positionConfig |> mapToDecimalStringOrZero (.downStop >> .limitPrice) |> Html.text ]
+                , Html.input [ onInput UpTriggerPriceChanged ] []
+                , Html.input [ onInput UpLimitPriceChanged ] []
+                , Html.div [] [ model.positionConfig |> mapToDecimalStringOrZero (.upStop >> .triggerPrice) |> Html.text ]
+                , Html.div [] [ model.positionConfig |> mapToDecimalStringOrZero (.upStop >> .limitPrice) |> Html.text ]
+                , Html.button [ onClick ChangePositionConfig ] [ text "Update Position Config" ]    
+                ]
+    in
     Html.div [ style "padding" "30px" ]
         [ Html.button [ onClick Increment ] [ text "+" ]
         , Html.text (String.fromInt model.counter)
         , Html.button [ onClick Decrement ] [ text "-" ]
         , Html.div [] [ Html.text "Click me then refresh me!" ]
-        , Html.div [] 
-            [ Html.input [ onInput KeyChanged ] [  ] 
-            , Html.input [ onInput SecretChanged ] [  ]
-            ]
-        , Html.div [] [ Html.text model.apiConnection.key ]
-        , Html.div [] [ Html.text model.apiConnection.secret ]
-        , Html.button [ onClick ChangeApiConnection ] [ text "-" ]
+        , apiView
+        , positionConfigView
         ]
