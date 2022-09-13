@@ -80,6 +80,11 @@ updateFromFrontend sessionId clientId msg model =
                 , getAccountInfo apiConnection |> Task.attempt GotAccountInfo
                 ] )
 
+        PositionConfigChanged positionConfig ->
+            ( { model | positionConfig = Just positionConfig }
+            , broadcast (NewPositionConfig positionConfig)
+            )
+
 subscriptions model =
     Sub.batch
         [ Lamdera.onConnect ClientConnected
