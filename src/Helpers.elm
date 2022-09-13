@@ -3,12 +3,13 @@ module Helpers exposing (..)
 import Decimal exposing (Decimal)
 import Html exposing (text)
 import Html exposing (Html)
+import Html exposing (a)
 
 mapWithDefault : (a -> b) -> b -> Maybe a -> b
 mapWithDefault fn def =
     Maybe.map fn >> Maybe.withDefault def
 
-mapStringOrBlank : (String -> b) -> String -> Maybe String -> b
+mapStringOrBlank : (a -> String) -> Maybe a -> String
 mapStringOrBlank fn =
     mapWithDefault fn ""
 
