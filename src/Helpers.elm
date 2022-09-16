@@ -21,6 +21,6 @@ mapDecimalOrZero : (a -> Decimal) -> Maybe a -> String
 mapDecimalOrZero fn =
     mapDecimalDefault fn "0"
 
-mapDecimalOrBlank : (a -> String) -> Maybe a -> String
+mapDecimalOrBlank : (a -> Decimal) -> Maybe a -> String
 mapDecimalOrBlank fn =
-    mapWithDefault fn ""
+    mapWithDefault (fn >> Decimal.toString) ""

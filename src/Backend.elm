@@ -81,7 +81,7 @@ updateFromFrontend sessionId clientId msg model =
                 ] )
 
         PositionConfigChanged positionConfig ->
-            ( { model | positionConfig = Just positionConfig }
+            ( { model | positionConfig = positionConfig }
             , broadcast (NewPositionConfig positionConfig)
             )
 

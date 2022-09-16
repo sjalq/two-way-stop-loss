@@ -27,6 +27,20 @@ type alias PositionConfig =
     , upStop : StopOrder
     }
 
+positionConfigDefault : PositionConfig
+positionConfigDefault = 
+    { asset = ""
+    , denominatingAsset = ""
+    , upStop = 
+        { triggerPrice = Decimal.zero
+        , limitPrice = Decimal.zero 
+        }
+    , downStop = 
+        { triggerPrice = Decimal.zero
+        , limitPrice = Decimal.zero
+        } 
+    }
+
 
 type alias BackendModel =
     { counter : Int
@@ -44,26 +58,41 @@ type alias FrontendModel =
     
 
 type FrontendMsg
+    = CounterChange CounterMsg
+    | ApiConnectionChange ApiConnectionMsg
+    | PositionConfigChange PositionConfigMsg
+    | FNoop
+
+
+type CounterMsg
     = Increment
     | Decrement
-    | KeyChanged String
+
+
+type ApiConnectionMsg 
+    = KeyChanged String
     | SecretChanged String
     | ChangeApiConnection
-    | AssetChanged String
+
+
+type PositionConfigMsg
+    = AssetChanged String
     | DenominatingAssetChanged String
-    | DownTriggerPriceChanged String
-    | DownLimitPriceChanged String
-    | UpTriggerPriceChanged String
-    | UpLimitPriceChanged String
+    | DownStopOrderChange StopOrderMsg
+    | UpStopOrderChange StopOrderMsg
     | ChangePositionConfig
-    | FNoop
+
+
+type StopOrderMsg 
+    = TriggerPriceChanged String
+    | LimitPriceChanged String
 
 
 type ToBackend
     = CounterIncremented
     | CounterDecremented
     | ApiConnectionChanged ApiConnection
-    | PositionConfigChanged PositionConfig
+    | PositionConfigChanged (Maybe PositionConfig)
 
 
 type BackendMsg
@@ -76,6 +105,6 @@ type BackendMsg
 type ToFrontend
     = CounterNewValue Int String
     | NewApiConnection ApiConnection
-    | NewPositionConfig PositionConfig
+    | NewPositionConfig (Maybe PositionConfig)
     | AccountInfoSuccess AccountInfo
     | AccountInfoFailure Http.Error
