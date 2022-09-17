@@ -196,53 +196,59 @@ view model =
         -- labeledButton label msg =
         --     Html.button [ onClick msg ] [ Html.text label ]
             
+        input msg value placeholder label = 
+            Input.text 
+                [] 
+                { onChange = msg
+                , text = value
+                , placeholder = Just (Input.placeholder [] (text placeholder)) 
+                , label = Input.labelAbove [] (text label)
+                }
+        
         apiView = 
             column 
                 []     
                 [ text "API Connection"
-                , Input.text 
-                    [] 
-                    { onChange = KeyChanged
-                    , text = model.apiConnection.key
-                    , placeholder =
-                        Just <|
-                            Input.placeholder [] <|
-                                text "Enter your API key"
-                    , label = Input.labelAbove [] <| text "API Key"
-                    }
-                , Input.text 
-                    [] 
-                    { onChange = KeyChanged
-                    , text = model.apiConnection.secret
-                    , placeholder =
-                        Just <|
-                            Input.placeholder [] <|
-                                text "Enter your API key"
-                    , label = Input.labelAbove [] <| text "API Key"
-                    }
+                , input KeyChanged model.apiConnection.key "Enter your API key" "Key"
+                , input SecretChanged model.apiConnection.secret "Enter your API secret" "Secret"
                 , Element.text model.apiConnection.key
                 , Element.text model.apiConnection.secret
                 , Input.button buttonStyle { onPress = Just ChangeApiConnection, label = text "Update API Connection" }
                 ]
 
-        -- positionConfigView = 
-        --     Html.div
-        --         []
-        --         [ Html.text "Position Config"
-        --         , labeledInput "Asset" AssetChanged
-        --         , labeledInput "Denominating Asset" DenominatingAssetChanged 
-        --         , labeledInput "Down Trigger Price" TriggerPriceChanged |> Html.map DownStopOrderChange
-        --         , labeledInput "Down Stop Price" LimitPriceChanged |> Html.map DownStopOrderChange
-        --         , labeledInput "Up Trigger Price" TriggerPriceChanged |> Html.map UpStopOrderChange
-        --         , labeledInput "Up Stop Price" LimitPriceChanged |> Html.map UpStopOrderChange
-        --         , labeledValue "Asset" (model.positionConfig |> mapStringOrBlank .asset)
-        --         , labeledValue "Denominating Asset" (model.positionConfig |> mapStringOrBlank .denominatingAsset)
-        --         , labeledValue "Down Trigger Price" (model.positionConfig |> mapDecimalOrBlank (.downStop >> .triggerPrice))
-        --         , labeledValue "Down Stop Price" (model.positionConfig |> mapDecimalOrBlank (.downStop >> .limitPrice))
-        --         , labeledValue "Up Trigger Price" (model.positionConfig |> mapDecimalOrBlank (.upStop >> .triggerPrice))
-        --         , labeledValue "Up Stop Price" (model.positionConfig |> mapDecimalOrBlank (.upStop >> .limitPrice))
-        --         , labeledButton "Update Position Config" ChangePositionConfig
-        --         ]
+        positionConfigView = 
+            let
+                positionConfig = model.positionConfig |> Maybe.withDefault positionConfigDefault
+            in
+                column
+                    [ spacing 10 ]
+                    [ text "Position Config"
+                    , input AssetChanged positionConfig.asset "Enter the asset you want to trade" "Asset"
+                    , input DenominatingAssetChanged positionConfig.denominatingAsset "Enter the asset you want to trade with" "Denominating Asset"
+                    , input 
+                        TriggerPriceChanged 
+                        (positionConfig.upStop.triggerPrice |> Decimal.toString) 
+                        "Enter the trigger price" "Up Stop Trigger Price"
+                        |> Element.map UpStopOrderChange
+                    , input 
+                        LimitPriceChanged 
+                        (positionConfig.upStop.limitPrice |> Decimal.toString) 
+                        "Enter the limit price" "Up Stop Limit Price"
+                        |> Element.map UpStopOrderChange
+                    , input
+                        TriggerPriceChanged 
+                        (positionConfig.downStop.triggerPrice |> Decimal.toString) 
+                        "Enter the trigger price" "Down Stop Trigger Price"
+                        |> Element.map DownStopOrderChange
+                    , input
+                        LimitPriceChanged 
+                        (positionConfig.downStop.limitPrice |> Decimal.toString) 
+                        "Enter the limit price" "Down Stop Limit Price"
+                        |> Element.map DownStopOrderChange
+                    , Input.button buttonStyle { onPress = Just ChangePositionConfig, label = text "Update Position Config" }
+                    ]
+
+
         buttonStyle = 
             [ padding 5
             -- , alignLeft
@@ -259,16 +265,8 @@ view model =
                 , text (String.fromInt model.counter)
                 , Input.button buttonStyle { onPress = Just (CounterChange Decrement), label = text "-" }
                 , apiView |> Element.map ApiConnectionChange
+                , positionConfigView |> Element.map PositionConfigChange
                 ]
-
-        -- Html.div [ style "padding" "30px" ]
-        --     [ Html.button [ onClick (CounterChange Increment) ] [ text "+" ]
-        --     , Html.text (String.fromInt model.counter)
-        --     , Html.button [ onClick (CounterChange Decrement) ] [ text "-" ]
-        --     , Html.div [] [ Html.text "Click me then refresh me!" ]
-        --     , apiView |> Html.map ApiConnectionChange
-        --     , positionConfigView |> Html.map PositionConfigChange
-        --     ]
 
 color =
     { blue = rgb255 0x72 0x9F 0xCF
