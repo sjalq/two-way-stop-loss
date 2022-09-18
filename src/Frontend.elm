@@ -180,22 +180,6 @@ updateFromBackend msg model =
 view : Model -> Html FrontendMsg
 view model =
     let
-        a = 1
-        -- labeledInput label msg =
-        --     Html.div []
-        --         [ Html.label [] [ Html.text label ]
-        --         , Html.input [ onInput msg ] []
-        --         ]
-
-        -- labeledValue label value =
-        --     Html.div []
-        --         [ Html.label [] [ Html.text label ]
-        --         , Html.div [] [ Html.text value ]
-        --         ]
-
-        -- labeledButton label msg =
-        --     Html.button [ onClick msg ] [ Html.text label ]
-            
         input msg value placeholder label = 
             Input.text 
                 [] 
