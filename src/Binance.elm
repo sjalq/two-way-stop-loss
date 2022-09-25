@@ -7,6 +7,8 @@ import BinanceDecoder exposing (..)
 import Http exposing (Header)
 import Task exposing (..)
 import Json.Decode exposing (..)
+import PrivateConfig exposing (apiConnection)
+import Decimal exposing (Decimal)
 
 
 
@@ -18,7 +20,8 @@ proxy =
 
 baseUrl : String
 baseUrl =  
-    "https://api.binance.com/api/v3/"
+    --"https://api.binance.com/api/v3/"
+    "https://testnet.binance.vision/api/v3/"
 
 
 handleJsonResponse : Decoder a -> Http.Response String -> Result Http.Error a
@@ -61,22 +64,22 @@ signParams secretKey timestamp paramString =
 getAccountInfo : ApiConnection -> Task Http.Error AccountInfo
 getAccountInfo apiConnection =
     let
-        signedParams timestamp = Debug.log "params" (signParams apiConnection.secret timestamp "")    
+        signedParams timestamp = signParams apiConnection.secret timestamp ""
+        fetchAccountTask timestamp = 
+            Http.task
+                { method = "GET"
+                , headers = 
+                    [ Http.header "X-MBX-APIKEY" apiConnection.key 
+                    , Http.header "Content-Type" "application/json" 
+                    ]
+                , url = proxy ++ baseUrl ++ "account" ++ "?" ++ signedParams timestamp
+                , body = Http.emptyBody
+                , resolver = Http.stringResolver <| handleJsonResponse <| accountInfoDecoder
+                , timeout = Nothing
+                }
     in
         getTimestampTask
-        |> Task.andThen (
-            \timestamp -> 
-                Http.task
-                    { method = "GET"
-                    , headers = 
-                        [ Http.header "X-MBX-APIKEY" apiConnection.key 
-                        , Http.header "Content-Type" "application/json" 
-                        ]
-                    , url = proxy ++ baseUrl ++ "account" ++ "?" ++ signedParams timestamp
-                    , body = Http.emptyBody
-                    , resolver = Http.stringResolver <| handleJsonResponse <| accountInfoDecoder
-                    , timeout = Nothing
-                    })
+        |> Task.andThen fetchAccountTask
 
 
 getTimestampTask : Task Http.Error Timestamp
@@ -89,3 +92,48 @@ getTimestampTask =
         , resolver = Http.stringResolver <| handleJsonResponse <| timestampDecoder
         , timeout = Nothing
         }
+
+fetchCurrentPostion : ApiConnection -> PositionConfig -> Task Http.Error (List Position)
+fetchCurrentPostion apiConnection positionConfig =
+    -- should return
+    -- how much are in orders
+    -- how much is free
+
+--placePositions : ApiConnection -> PositionConfig -> Task Http.Error Position
+placePositions apiConnection positionConfig =
+    -- goals:
+    -- 1. make sure we're on the right side of the market
+    -- 2. make sure there's an appropriate stop loss at the right price
+    -- logic:
+    1
+
+getPrice : String -> Task Http.Error SymbolPrice
+getPrice symbol =
+    Http.task
+        { method = "GET"
+        , headers = []
+        , url = proxy ++ baseUrl ++ "ticker/price?symbol=" ++ symbol
+        , body = Http.emptyBody
+        , resolver = Http.stringResolver <| handleJsonResponse <| symbalPriceDecoder
+        , timeout = Nothing
+        }
+
+getOpenOrders : ApiConnection -> Task Http.Error (List OpenOrder)
+getOpenOrders apiConnection =
+    let
+        signedParams timestamp = signParams apiConnection.secret timestamp ""
+        fetchOpenOrdersTask timestamp = 
+            Http.task
+                { method = "GET"
+                , headers = 
+                    [ Http.header "X-MBX-APIKEY" apiConnection.key 
+                    , Http.header "Content-Type" "application/json" 
+                    ]
+                , url = proxy ++ baseUrl ++ "openOrders" ++ "?" ++ signedParams timestamp
+                , body = Http.emptyBody
+                , resolver = Http.stringResolver <| handleJsonResponse <| openOrdersDecoder
+                , timeout = Nothing
+                }
+    in
+        getTimestampTask
+        |> Task.andThen fetchOpenOrdersTask

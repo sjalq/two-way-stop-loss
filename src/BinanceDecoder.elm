@@ -31,6 +31,33 @@ type alias BalanceObject =
     }
 
 
+type alias SymbolPrice =
+    { price : String
+    , symbol : String
+    }
+
+type alias Order =
+    { clientOrderId : String
+    , cummulativeQuoteQty : String
+    , executedQty : String
+    , icebergQty : String
+    , isWorking : Bool
+    , orderId : Int
+    , orderListId : Int
+    , origQty : String
+    , origQuoteOrderQty : String
+    , price : String
+    , side : String
+    , status : String
+    , stopPrice : String
+    , symbol : String
+    , time : Int
+    , timeInForce : String
+    , type_ : String
+    , updateTime : Int
+    }
+
+
 accountInfoDecoder : Json.Decode.Decoder AccountInfo
 accountInfoDecoder = 
     let
@@ -102,4 +129,85 @@ encodedTimestamp : Timestamp -> Json.Encode.Value
 encodedTimestamp timestamp = 
     Json.Encode.object
         [ ( "serverTime", Json.Encode.int timestamp.serverTime )
+        ]
+
+
+symbolPriceDecoder : Json.Decode.Decoder SymbolPrice
+symbolPriceDecoder = 
+    Json.Decode.map2 SymbolPrice
+        (Json.Decode.field "price" Json.Decode.string)
+        (Json.Decode.field "symbol" Json.Decode.string)
+
+
+encodedSymbolPrice : SymbolPrice -> Json.Encode.Value
+encodedSymbolPrice symbolPrice = 
+    Json.Encode.object
+        [ ( "price", Json.Encode.string symbolPrice.price )
+        , ( "symbol", Json.Encode.string symbolPrice.symbol )
+        ]
+
+
+orderListDecoder : Json.Decode.Decoder (List Order)
+orderListDecoder = 
+    Json.Decode.list orderDecoder
+
+
+orderDecoder : Json.Decode.Decoder Order
+orderDecoder = 
+    let
+        fieldSet0 = 
+            Json.Decode.map8 Order
+                (Json.Decode.field "clientOrderId" Json.Decode.string)
+                (Json.Decode.field "cummulativeQuoteQty" Json.Decode.string)
+                (Json.Decode.field "executedQty" Json.Decode.string)
+                (Json.Decode.field "icebergQty" Json.Decode.string)
+                (Json.Decode.field "isWorking" Json.Decode.bool)
+                (Json.Decode.field "orderId" Json.Decode.int)
+                (Json.Decode.field "orderListId" Json.Decode.int)
+                (Json.Decode.field "origQty" Json.Decode.string)
+
+        fieldSet1 =
+            Json.Decode.map8 (<|)
+                fieldSet0
+                (Json.Decode.field "origQuoteOrderQty" Json.Decode.string)
+                (Json.Decode.field "price" Json.Decode.string)
+                (Json.Decode.field "side" Json.Decode.string)
+                (Json.Decode.field "status" Json.Decode.string)
+                (Json.Decode.field "stopPrice" Json.Decode.string)
+                (Json.Decode.field "symbol" Json.Decode.string)
+                (Json.Decode.field "time" Json.Decode.int)
+    in
+    Json.Decode.map4 (<|)
+        fieldSet1
+        (Json.Decode.field "timeInForce" Json.Decode.string)
+        (Json.Decode.field "type" Json.Decode.string)
+        (Json.Decode.field "updateTime" Json.Decode.int)
+
+
+encodedOrderList : List Order -> Json.Encode.Value
+encodedOrderList orderList =
+    Json.Encode.list encodedRootObject orderList
+
+
+encodedOrder : RootOrderObject -> Json.Encode.Value
+encodedOrder order = 
+    Json.Encode.object
+        [ ( "clientOrderId", Json.Encode.string order.clientOrderId )
+        , ( "cummulativeQuoteQty", Json.Encode.string order.cummulativeQuoteQty )
+        , ( "executedQty", Json.Encode.string order.executedQty )
+        , ( "icebergQty", Json.Encode.string order.icebergQty )
+        , ( "isWorking", Json.Encode.bool order.isWorking )
+        , ( "orderId", Json.Encode.int order.orderId )
+        , ( "orderListId", Json.Encode.int order.orderListId )
+        , ( "origQty", Json.Encode.string order.origQty )
+        , ( "origQuoteOrderQty", Json.Encode.string order.origQuoteOrderQty )
+        , ( "price", Json.Encode.string order.price )
+        , ( "side", Json.Encode.string order.side )
+        , ( "status", Json.Encode.string order.status )
+        , ( "stopPrice", Json.Encode.string order.stopPrice )
+        , ( "symbol", Json.Encode.string order.symbol )
+        , ( "time", Json.Encode.int order.time )
+        , ( "timeInForce", Json.Encode.string order.timeInForce )
+        , ( "type", Json.Encode.string order.type_ )
+        , ( "updateTime", Json.Encode.int order.updateTime )
         ]

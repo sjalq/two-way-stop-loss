@@ -22,6 +22,7 @@ import Types exposing (FrontendMsg(..))
 import Helpers exposing (..)
 import Decimal exposing (Decimal)
 import Http
+import Time
 
 
 type alias Model =
@@ -56,7 +57,8 @@ init =
     , clientId = ""
     , apiConnection = { key = ""
                       , secret = "" }
-    , positionConfig = Nothing }
+    , positionConfig = Nothing
+    , serverTime = Nothing }
     , Cmd.none )
 
 
@@ -129,9 +131,8 @@ update msg model =
                         , Cmd.none )
 
                     UpStopOrderChange upMsg ->
-                        ( { model | positionConfig = Just { oldPositionConfig | upStop = updateStop oldPositionConfig.downStop upMsg } }
+                        ( { model | positionConfig = Just { oldPositionConfig | upStop = updateStop oldPositionConfig.upStop upMsg } }
                         , Cmd.none )
-                        
 
         FNoop ->
             ( model, Cmd.none )
@@ -172,6 +173,9 @@ updateFromBackend msg model =
                             Debug.log "BadBody" body
             in
                 ( model, Cmd.none )
+
+        ServerTime posix ->
+            ( {model | serverTime = Just posix }, Cmd.none )
 
         AccountInfoSuccess _ ->
             ( model, Cmd.none )
@@ -232,6 +236,14 @@ view model =
                     , Input.button buttonStyle { onPress = Just ChangePositionConfig, label = text "Update Position Config" }
                     ]
 
+        timeFromServer = 
+            case model.serverTime of
+                Just posix ->
+                    text <| "Server time: " ++ (String.fromInt <| Time.posixToMillis posix)
+
+                Nothing ->
+                    text "Server time: Not yet received"
+
 
         buttonStyle = 
             [ padding 5
@@ -241,15 +253,18 @@ view model =
             , Border.color color.blue
             , Background.color color.lightBlue
             ]
+
+        button msg label = 
+            Input.button buttonStyle { onPress = Just msg, label = text label }
     in
         layout [ padding 10 ] <|
             row [ spacing 10 ]
-                [ Input.button 
-                    buttonStyle { onPress = Just (CounterChange Increment), label = text "+" }
+                [ button (CounterChange Increment) "+"
                 , text (String.fromInt model.counter)
-                , Input.button buttonStyle { onPress = Just (CounterChange Decrement), label = text "-" }
+                , button (CounterChange Decrement) "-" 
                 , apiView |> Element.map ApiConnectionChange
                 , positionConfigView |> Element.map PositionConfigChange
+                , timeFromServer
                 ]
 
 color =

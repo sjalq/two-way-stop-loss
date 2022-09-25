@@ -7,6 +7,7 @@ import Binance exposing (..)
 import Html exposing (time)
 import PrivateConfig
 import Task
+import Time
 
 
 type alias Model =
@@ -27,6 +28,7 @@ init =
     ( { counter = 0 
       , apiConnection = PrivateConfig.apiConnection
       , positionConfig = Nothing
+      , serverTime = Nothing
       }
     , Cmd.none )
 
@@ -42,7 +44,7 @@ update msg model =
                 ] )
 
         GetAccountInfo ->
-            ( model, Task.attempt GotAccountInfo (getAccountInfo model.apiConnection))
+            ( model, getAccountInfo model.apiConnection |> Task.attempt GotAccountInfo)
 
         GotAccountInfo accountInfo ->
             case accountInfo of
@@ -51,6 +53,9 @@ update msg model =
 
                 Err error ->
                     ( model, broadcast <| AccountInfoFailure error )
+
+        Tick posix ->
+            ( model, broadcast <| ServerTime posix )
 
         Noop ->
             ( model, Cmd.none )
@@ -88,4 +93,5 @@ updateFromFrontend sessionId clientId msg model =
 subscriptions model =
     Sub.batch
         [ Lamdera.onConnect ClientConnected
+        , Time.every 1000 Tick
         ]

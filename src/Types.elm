@@ -6,6 +6,7 @@ import BinanceDecoder exposing (..)
 import Http exposing (Error)
 -- import Numeric.Decimal as Decimal exposing (Decimal)
 import Decimal exposing (..)
+import Time
 
 type alias ApiConnection =
     { key : String
@@ -46,6 +47,7 @@ type alias BackendModel =
     { counter : Int
     , apiConnection : ApiConnection
     , positionConfig : Maybe PositionConfig -- initially assumes only 1 position with 100% of the funds
+    , serverTime : Maybe Time.Posix
     }
 
 
@@ -54,6 +56,7 @@ type alias FrontendModel =
     , clientId : String
     , apiConnection : ApiConnection
     , positionConfig : Maybe PositionConfig
+    , serverTime : Maybe Time.Posix
     }
     
 
@@ -99,6 +102,7 @@ type BackendMsg
     = ClientConnected SessionId ClientId
     | GetAccountInfo
     | GotAccountInfo (Result Error AccountInfo)    
+    | Tick Time.Posix
     | Noop
 
 
@@ -108,3 +112,4 @@ type ToFrontend
     | NewPositionConfig (Maybe PositionConfig)
     | AccountInfoSuccess AccountInfo
     | AccountInfoFailure Http.Error
+    | ServerTime Time.Posix
