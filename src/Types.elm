@@ -1,13 +1,13 @@
 module Types exposing (..)
 
+
 import Lamdera exposing (ClientId, SessionId)
 import Set exposing (Set)
-import JsonTranslation.BinanceDecoder as BinanceDecoder
-import JsonTranslation.CancelOrder._elm as CancelOrder
 import Http exposing (Error)
--- import Numeric.Decimal as Decimal exposing (Decimal)
 import Decimal exposing (..)
 import Time
+import JsonTranslation.AccountInfo exposing (..)
+
 
 type alias ApiConnection =
     { key : String
@@ -106,7 +106,7 @@ type ToBackend
 type BackendMsg
     = ClientConnected SessionId ClientId
     | GetAccountInfo
-    | GotAccountInfo (Result Error BinanceDecoder.AccountInfo)    
+    | GotAccountInfo (Result Error JsonTranslation.AccountInfo.Root)    
     | Tick Time.Posix
     | Noop
 
@@ -115,6 +115,6 @@ type ToFrontend
     = CounterNewValue Int String
     | NewApiConnection ApiConnection
     | NewPositionConfig (Maybe PositionConfig)
-    | AccountInfoSuccess BinanceDecoder.AccountInfo
+    | AccountInfoSuccess JsonTranslation.AccountInfo.Root
     | AccountInfoFailure Http.Error
     | ServerTime Time.Posix

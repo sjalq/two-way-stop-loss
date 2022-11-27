@@ -1,19 +1,19 @@
 module Binance exposing (..)
 
+
 import Types exposing (..)  
 import Http
 import Crypto.HMAC exposing (..)
-import JsonTranslation.BinanceDecoder as BinanceDecoder
-import JsonTranslation.CancelOrder._elm as CancelOrderDecoder
 import Http exposing (Header)
 import Task exposing (..)
 import Json.Decode exposing (..)
 import PrivateConfig exposing (apiConnection)
 import Decimal exposing (Decimal)
-import BinanceDecoders.BinanceDecoder exposing (symbolPriceDecoder)
-import BinanceDecoders.BinanceDecoder exposing (AccountInfo)
-import BinanceDecoders.BinanceDecoder exposing (Order)
-
+import JsonTranslation.Time exposing (..)
+import JsonTranslation.AccountInfo exposing (..)
+import JsonTranslation.SymbolPrice exposing (..)
+import JsonTranslation.DeleteOpenOrders exposing (..)
+import JsonTranslation.OpenOrders
 
 
 proxy : String
@@ -52,7 +52,7 @@ handleJsonResponse decoder response =
                     Ok result
 
 
-signParams : Key -> BinanceDecoder.Timestamp -> String -> String
+signParams : Key -> JsonTranslation.Time.Root -> String -> String
 signParams secretKey timestamp paramString = 
     let 
         sign = digest sha256 secretKey
@@ -65,7 +65,7 @@ signParams secretKey timestamp paramString =
         timestampedParams ++ "&signature=" ++ sign timestampedParams
 
 
-getAccountInfo : ApiConnection -> Task Http.Error BinanceDecoder.AccountInfo
+getAccountInfo : ApiConnection -> Task Http.Error JsonTranslation.AccountInfo.Root
 getAccountInfo apiConnection =
     let
         signedParams timestamp = signParams apiConnection.secret timestamp ""
@@ -78,7 +78,7 @@ getAccountInfo apiConnection =
                     ]
                 , url = proxy ++ baseUrl ++ "account" ++ "?" ++ signedParams timestamp
                 , body = Http.emptyBody
-                , resolver = Http.stringResolver <| handleJsonResponse <| BinanceDecoder.accountInfoDecoder
+                , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.AccountInfo.rootDecoder
                 , timeout = Nothing
                 }
     in
@@ -86,29 +86,29 @@ getAccountInfo apiConnection =
         |> Task.andThen fetchAccountTask
 
 
-getTimestampTask : Task Http.Error BinanceDecoder.Timestamp
+getTimestampTask : Task Http.Error JsonTranslation.Time.Root
 getTimestampTask =
     Http.task
         { method = "GET"
         , headers = []
         , url = proxy ++ baseUrl ++ "time"
         , body = Http.emptyBody
-        , resolver = Http.stringResolver <| handleJsonResponse <| BinanceDecoder.timestampDecoder
+        , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.Time.rootDecoder
         , timeout = Nothing
         }
 
-getPrice : String -> Task Http.Error BinanceDecoder.SymbolPrice
+getPrice : String -> Task Http.Error JsonTranslation.SymbolPrice.Root
 getPrice symbol =
     Http.task
         { method = "GET"
         , headers = []
         , url = proxy ++ baseUrl ++ "ticker/price?symbol=" ++ symbol
         , body = Http.emptyBody
-        , resolver = Http.stringResolver <| handleJsonResponse <| symbolPriceDecoder
+        , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.SymbolPrice.rootDecoder
         , timeout = Nothing
         }
 
-cancelAllOpenOrders : ApiConnection -> String -> Task Http.Error CancelOrderDecoder.RootObject
+cancelAllOpenOrders : ApiConnection -> String -> Task Http.Error JsonTranslation.DeleteOpenOrders.Root
 cancelAllOpenOrders apiConnection symbol =
     let
         signedParams timestamp = signParams apiConnection.secret timestamp ("symbol=" ++ symbol)
@@ -121,14 +121,14 @@ cancelAllOpenOrders apiConnection symbol =
                     ]
                 , url = proxy ++ baseUrl ++ "openOrders" ++ "?" ++ signedParams timestamp
                 , body = Http.emptyBody
-                , resolver = Http.stringResolver <| handleJsonResponse <| CancelOrderDecoder.rootObjectDecoder
+                , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.DeleteOpenOrders.rootDecoder
                 , timeout = Nothing
                 }
     in
         getTimestampTask
         |> Task.andThen cancelAllOpenOrdersTask
 
-getOpenOrders : ApiConnection -> Task Http.Error (List BinanceDecoder.Order)
+getOpenOrders : ApiConnection -> Task Http.Error (List JsonTranslation.OpenOrders.RootObject)
 getOpenOrders apiConnection =
     let
         signedParams timestamp = signParams apiConnection.secret timestamp ""
@@ -141,7 +141,7 @@ getOpenOrders apiConnection =
                     ]
                 , url = proxy ++ baseUrl ++ "openOrders" ++ "?" ++ signedParams timestamp
                 , body = Http.emptyBody
-                , resolver = Http.stringResolver <| handleJsonResponse <| BinanceDecoder.orderListDecoder
+                , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.OpenOrders.rootObjectDecoder
                 , timeout = Nothing
                 }
     in
@@ -151,7 +151,7 @@ getOpenOrders apiConnection =
 
 -- This function makes sure that if the price is below the position config up stop
 -- that we are in cash and if the price is above the down stop, that we are in the asset
-calculateOrder : PositionConfig -> Decimal -> AccountInfo -> Maybe Order
+calculateOrder : PositionConfig -> Decimal -> JsonTranslation.AccountInfo.Root -> Maybe Order
 calculateOrder positionConfig price accountInfo =
     let
         -- invariants:
