@@ -1,8 +1,8 @@
-module BinanceDecoder exposing (..)
+module BinanceDecoders.BinanceDecoder exposing (..)
 
 import Json.Decode
 import Json.Encode
-
+import Decimal exposing (Decimal)
 
 -- Required packages:
 -- * elm/json
@@ -26,30 +26,30 @@ type alias AccountInfo =
 
 type alias BalanceObject =
     { asset : String
-    , free : String
-    , locked : String
+    , free : Decimal
+    , locked : Decimal
     }
 
 
 type alias SymbolPrice =
-    { price : String
+    { price : Decimal
     , symbol : String
     }
 
 type alias Order =
     { clientOrderId : String
-    , cummulativeQuoteQty : String
-    , executedQty : String
-    , icebergQty : String
+    , cummulativeQuoteQty : Decimal
+    , executedQty : Decimal
+    , icebergQty : Decimal
     , isWorking : Bool
     , orderId : Int
     , orderListId : Int
-    , origQty : String
-    , origQuoteOrderQty : String
-    , price : String
-    , side : String
+    , origQty : Decimal
+    , origQuoteOrderQty : Decimal
+    , price : Decimal
+    , side : OrderSide
     , status : String
-    , stopPrice : String
+    , stopPrice : Decimal
     , symbol : String
     , time : Int
     , timeInForce : String
@@ -186,10 +186,10 @@ orderDecoder =
 
 encodedOrderList : List Order -> Json.Encode.Value
 encodedOrderList orderList =
-    Json.Encode.list encodedRootObject orderList
+    Json.Encode.list encodedOrder orderList
 
 
-encodedOrder : RootOrderObject -> Json.Encode.Value
+encodedOrder : Order -> Json.Encode.Value
 encodedOrder order = 
     Json.Encode.object
         [ ( "clientOrderId", Json.Encode.string order.clientOrderId )

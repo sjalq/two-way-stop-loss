@@ -2,7 +2,8 @@ module Types exposing (..)
 
 import Lamdera exposing (ClientId, SessionId)
 import Set exposing (Set)
-import BinanceDecoder exposing (..)
+import BinanceDecoders.BinanceDecoder as BinanceDecoder
+import BinanceDecoders.CancelOrder as CancelOrder
 import Http exposing (Error)
 -- import Numeric.Decimal as Decimal exposing (Decimal)
 import Decimal exposing (..)
@@ -22,9 +23,9 @@ type alias StopOrder =
 
 
 type alias PositionConfig = 
-    { asset : Asset
+    { asset : Asset 
     , denominatingAsset : Asset
-    , downStop : StopOrder
+    , downStop : StopOrder 
     , upStop : StopOrder
     }
 
@@ -90,6 +91,10 @@ type StopOrderMsg
     = TriggerPriceChanged String
     | LimitPriceChanged String
 
+type OrderSide
+    = Buy
+    | Sell
+
 
 type ToBackend
     = CounterIncremented
@@ -101,7 +106,7 @@ type ToBackend
 type BackendMsg
     = ClientConnected SessionId ClientId
     | GetAccountInfo
-    | GotAccountInfo (Result Error AccountInfo)    
+    | GotAccountInfo (Result Error BinanceDecoder.AccountInfo)    
     | Tick Time.Posix
     | Noop
 
@@ -110,6 +115,6 @@ type ToFrontend
     = CounterNewValue Int String
     | NewApiConnection ApiConnection
     | NewPositionConfig (Maybe PositionConfig)
-    | AccountInfoSuccess AccountInfo
+    | AccountInfoSuccess BinanceDecoder.AccountInfo
     | AccountInfoFailure Http.Error
     | ServerTime Time.Posix
