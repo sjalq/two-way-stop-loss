@@ -2,8 +2,8 @@ module Types exposing (..)
 
 import Lamdera exposing (ClientId, SessionId)
 import Set exposing (Set)
-import BinanceDecoders.BinanceDecoder as BinanceDecoder
-import BinanceDecoders.CancelOrder as CancelOrder
+import JsonTranslation.BinanceDecoder as BinanceDecoder
+import JsonTranslation.CancelOrder._elm as CancelOrder
 import Http exposing (Error)
 -- import Numeric.Decimal as Decimal exposing (Decimal)
 import Decimal exposing (..)

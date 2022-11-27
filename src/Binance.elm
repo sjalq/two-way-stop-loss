@@ -3,8 +3,8 @@ module Binance exposing (..)
 import Types exposing (..)  
 import Http
 import Crypto.HMAC exposing (..)
-import BinanceDecoders.BinanceDecoder as BinanceDecoder
-import BinanceDecoders.CancelOrder as CancelOrderDecoder
+import JsonTranslation.BinanceDecoder as BinanceDecoder
+import JsonTranslation.CancelOrder._elm as CancelOrderDecoder
 import Http exposing (Header)
 import Task exposing (..)
 import Json.Decode exposing (..)
