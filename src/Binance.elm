@@ -15,7 +15,6 @@ import JsonTranslation.SymbolPrice exposing (..)
 import JsonTranslation.DeleteOpenOrders exposing (..)
 import JsonTranslation.OpenOrders
 
-
 proxy : String
 proxy = 
     --"" 
