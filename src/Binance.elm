@@ -13,7 +13,8 @@ import JsonTranslation.Time exposing (..)
 import JsonTranslation.AccountInfo exposing (..)
 import JsonTranslation.SymbolPrice exposing (..)
 import JsonTranslation.DeleteOpenOrders exposing (..)
-import JsonTranslation.OpenOrders
+import JsonTranslation.OpenOrders exposing (..)
+import JsonTranslation.PlaceOrder exposing (..)
 
 proxy : String
 proxy = 
@@ -96,8 +97,8 @@ getTimestampTask =
         , timeout = Nothing
         }
 
-getPrice : String -> Task Http.Error JsonTranslation.SymbolPrice.Root
-getPrice symbol =
+getSymbolPrice : String -> Task Http.Error JsonTranslation.SymbolPrice.Root
+getSymbolPrice symbol =
     Http.task
         { method = "GET"
         , headers = []
@@ -148,19 +149,84 @@ getOpenOrders apiConnection =
         |> Task.andThen fetchOpenOrdersTask
 
 
--- This function makes sure that if the price is below the position config up stop
--- that we are in cash and if the price is above the down stop, that we are in the asset
--- calculateOrder : PositionConfig -> Decimal -> JsonTranslation.AccountInfo.Root -> Maybe Order
--- calculateOrder positionConfig price accountInfo =
---     let
---         -- invariants:
---         -- if the price is below the down stop, then need to be in cash
---         --      if there is no stop loss, place one at the up stop
---         -- if the price is above the up stop, then need to be in the asset
---         --      if there is no stop loss, place one at the down stop
+sideToString : OrderSide -> String
+sideToString side =
+    case side of
+        Buy ->
+            "BUY"
 
---         belowDownStop = price < positionConfig.downStop.limitPrice
---         aboveUpStop = price > positionConfig.upStop.limitPrice
-        
---     in
---         maybeOrder
+        Sell ->
+            "SELL"
+
+placeStopLossOrder : 
+    ApiConnection 
+    -> StopOrder
+    -> Decimal 
+    -> Decimal 
+    -> OrderSide 
+    -> Task Http.Error JsonTranslation.PlaceOrder.Root
+placeStopLossOrder apiConnection stopOrder quantity =
+    let
+        params = 
+            "symbol=" ++ stopOrder.symbol
+            ++ "&side=" ++ sideToString stopOrder.side
+            ++ "&type=STOP_LOSS_LIMIT"
+            ++ "&quantity=" ++ (Decimal.toString quantity)
+            ++ "&stopPrice=" ++ (Decimal.toString stopOrder.stopPrice)
+            ++ "&price=" ++ (Decimal.toString stopOrder.limitPrice)
+            ++ "&timeInForce=GTC"
+        signedParams timestamp = signParams apiConnection.secret timestamp params
+        placeStopLossOrderTask timestamp = 
+            Http.task
+                { method = "POST"
+                , headers = 
+                    [ Http.header "X-MBX-APIKEY" apiConnection.key 
+                    , Http.header "Content-Type" "application/json" 
+                    ]
+                , url = proxy ++ baseUrl ++ "order" ++ "?" ++ signedParams timestamp
+                , body = Http.emptyBody
+                , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.PlaceOrder.rootDecoder
+                , timeout = Nothing
+                }
+    in
+        getTimestampTask
+        |> Task.andThen placeStopLossOrderTask
+
+
+stringToDecimal : String -> Decimal
+stringToDecimal str =
+    Decimal.fromIntString str |> Maybe.withDefault Decimal.zero
+
+-- resetStopOrder
+-- logic for this function:
+-- * get the price
+-- * close existing order for the symbol pair
+-- * get the balances from accountInfo
+-- * get the price
+-- * if the price is below the upStop
+--   * place the upStop order for the full cash balance from account info
+-- * if the price is above the downStop
+--   * place the downStop order for the full asset balance from account info
+resetStopOrder : ApiConnection -> PositionConfig -> Task Http.Error JsonTranslation.PlaceOrder.Root
+resetStopOrder apiConnection positionConfig =
+    let
+        placeStopLossOrderTask price = placeStopLossOrder apiConnection symbol price quantity side
+    in
+        getAccountInfo apiConnection
+        |> Task.andThen (\accountInfo ->
+            getSymbolPrice positionConfig.symbol
+            |> Task.andThen (\symbolPrice ->
+                cancelAllOpenOrders apiConnection positionConfig.symbol
+                |> Task.andThen (\_ ->
+                    let
+                        price = stringToDecimal symbolPrice.price
+                    in
+                        if price < upStop.limitPrice then
+                            placeStopLossOrderTask upStop
+                        else if price > downStop.limitPrice then
+                            placeStopLossOrderTask downStop
+                        else
+                            Task.succeed { orderId = 0, clientOrderId = "", transactTime = 0 }
+                )
+            )
+        )

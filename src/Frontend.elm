@@ -105,26 +105,33 @@ update msg model =
                                     Nothing ->
                                         oldStop
 
-                        TriggerPriceChanged priceString ->
+                        StopPriceChanged priceString ->
                             let 
                                 maybePrice = Decimal.fromIntString priceString
                             in
                                 case maybePrice of
                                     Just price ->
-                                        { oldStop | triggerPrice = price }
+                                        { oldStop | stopPrice = price }
 
                                     Nothing ->
                                         oldStop
+
+                        StopSymbolChanged symbol ->
+                            { oldStop | symbol = symbol }
             in
                 case positionMsg of
-                    AssetChanged asset ->
-                        ( { model | positionConfig = Just { oldPositionConfig | asset = asset } }, Cmd.none )
-
-                    DenominatingAssetChanged denominatingAsset ->
-                        ( { model | positionConfig = Just { oldPositionConfig | denominatingAsset = denominatingAsset } }, Cmd.none )
-
                     ChangePositionConfig ->
                         ( model, sendToBackend (PositionConfigChanged model.positionConfig) )
+
+                    SymbolChanged symbol ->
+                        ( 
+                            { model 
+                            | positionConfig = 
+                                Just { oldPositionConfig 
+                                | downStop = updateStop oldPositionConfig.downStop (StopSymbolChanged symbol)
+                                , upStop = updateStop oldPositionConfig.downStop (StopSymbolChanged symbol)
+                                } 
+                            } , Cmd.none )
 
                     DownStopOrderChange downMsg ->
                         ( { model | positionConfig = Just { oldPositionConfig | downStop = updateStop oldPositionConfig.downStop downMsg } }
@@ -211,11 +218,13 @@ view model =
                 column
                     [ spacing 10 ]
                     [ text "Position Config"
-                    , input AssetChanged positionConfig.asset "Enter the asset you want to trade" "Asset"
-                    , input DenominatingAssetChanged positionConfig.denominatingAsset "Enter the asset you want to trade with" "Denominating Asset"
+                    , input
+                        SymbolChanged
+                        positionConfig.downStop.symbol
+                        "Enter the asset pair" "" 
                     , input 
-                        TriggerPriceChanged 
-                        (positionConfig.upStop.triggerPrice |> Decimal.toString) 
+                        StopPriceChanged 
+                        (positionConfig.upStop.stopPrice |> Decimal.toString) 
                         "Enter the trigger price" "Up Stop Trigger Price"
                         |> Element.map UpStopOrderChange
                     , input 
@@ -224,8 +233,8 @@ view model =
                         "Enter the limit price" "Up Stop Limit Price"
                         |> Element.map UpStopOrderChange
                     , input
-                        TriggerPriceChanged 
-                        (positionConfig.downStop.triggerPrice |> Decimal.toString) 
+                        StopPriceChanged 
+                        (positionConfig.downStop.stopPrice |> Decimal.toString) 
                         "Enter the trigger price" "Down Stop Trigger Price"
                         |> Element.map DownStopOrderChange
                     , input

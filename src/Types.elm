@@ -17,30 +17,32 @@ type alias ApiConnection =
 type alias Asset = String
 
 type alias StopOrder = 
-    { triggerPrice : Decimal
+    { symbol : String
+    , stopPrice : Decimal
     , limitPrice : Decimal
+    , side : OrderSide
     }
 
 
 type alias PositionConfig = 
-    { asset : Asset 
-    , denominatingAsset : Asset
-    , downStop : StopOrder 
+    { downStop : StopOrder 
     , upStop : StopOrder
     }
 
 positionConfigDefault : PositionConfig
 positionConfigDefault = 
-    { asset = ""
-    , denominatingAsset = ""
-    , upStop = 
-        { triggerPrice = Decimal.zero
+    { upStop = 
+        { symbol = ""
+        , stopPrice = Decimal.zero
         , limitPrice = Decimal.zero 
-        }
+        , side = Buy
+        }   
     , downStop = 
-        { triggerPrice = Decimal.zero
-        , limitPrice = Decimal.zero
-        } 
+        { symbol = ""
+        , stopPrice = Decimal.zero
+        , limitPrice = Decimal.zero 
+        , side = Buy
+        }
     }
 
 
@@ -80,15 +82,15 @@ type ApiConnectionMsg
 
 
 type PositionConfigMsg
-    = AssetChanged String
-    | DenominatingAssetChanged String
-    | DownStopOrderChange StopOrderMsg
+    = DownStopOrderChange StopOrderMsg
     | UpStopOrderChange StopOrderMsg
+    | SymbolChanged String
     | ChangePositionConfig
 
 
 type StopOrderMsg 
-    = TriggerPriceChanged String
+    = StopSymbolChanged String
+    | StopPriceChanged String
     | LimitPriceChanged String
 
 type OrderSide
