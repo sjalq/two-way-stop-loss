@@ -1,4 +1,4 @@
-module BinanceDecoders.CancelOrder exposing (..)
+module JsonTranslation.DeleteOpenOrders exposing (..)
 
 import Json.Decode
 import Json.Encode
