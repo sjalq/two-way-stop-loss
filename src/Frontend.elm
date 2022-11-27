@@ -57,9 +57,13 @@ init =
     , clientId = ""
     , apiConnection = { key = ""
                       , secret = "" }
-    , positionConfig = Nothing
+    , twoWayStop = twoWayStopDefault
     , serverTime = Nothing }
     , Cmd.none )
+
+
+decimalFromString : String -> Decimal
+decimalFromString str = Decimal.fromIntString str |> Maybe.withDefault Decimal.zero
 
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
@@ -88,58 +92,34 @@ update msg model =
                         ( model, sendToBackend (ApiConnectionChanged model.apiConnection) )
 
         
-        PositionConfigChange positionMsg ->
-            let 
-                oldPositionConfig = model.positionConfig |> Maybe.withDefault positionConfigDefault
-
-                updateStop oldStop stopMsg = 
-                    case stopMsg of
-                        LimitPriceChanged priceString ->
-                            let 
-                                maybePrice = Decimal.fromIntString priceString
-                            in
-                                case maybePrice of
-                                    Just price ->
-                                        { oldStop | limitPrice = price }
-
-                                    Nothing ->
-                                        oldStop
-
-                        StopPriceChanged priceString ->
-                            let 
-                                maybePrice = Decimal.fromIntString priceString
-                            in
-                                case maybePrice of
-                                    Just price ->
-                                        { oldStop | stopPrice = price }
-
-                                    Nothing ->
-                                        oldStop
-
-                        StopSymbolChanged symbol ->
-                            { oldStop | symbol = symbol }
+        TwoWayStopChange twoWayStopnMsg ->
+            let
+                oldTwoWayStop = model.twoWayStop
             in
-                case positionMsg of
-                    ChangePositionConfig ->
-                        ( model, sendToBackend (PositionConfigChanged model.positionConfig) )
-
-                    SymbolChanged symbol ->
+                case twoWayStopnMsg of
+                    SymbolChanged symbol ->      
                         ( 
                             { model 
-                            | positionConfig = 
-                                Just { oldPositionConfig 
-                                | downStop = updateStop oldPositionConfig.downStop (StopSymbolChanged symbol)
-                                , upStop = updateStop oldPositionConfig.downStop (StopSymbolChanged symbol)
-                                } 
+                            | twoWayStop = { oldTwoWayStop | symbol = symbol } 
                             } , Cmd.none )
 
-                    DownStopOrderChange downMsg ->
-                        ( { model | positionConfig = Just { oldPositionConfig | downStop = updateStop oldPositionConfig.downStop downMsg } }
-                        , Cmd.none )
+                    StopPriceChanged price ->
+                        ( 
+                            { model 
+                            | twoWayStop = { oldTwoWayStop | stopPrice = price |> decimalFromString} 
+                            } , Cmd.none )
 
-                    UpStopOrderChange upMsg ->
-                        ( { model | positionConfig = Just { oldPositionConfig | upStop = updateStop oldPositionConfig.upStop upMsg } }
-                        , Cmd.none )
+                    LimitPriceDownChanged price ->
+                        ( 
+                            { model 
+                            | twoWayStop = { oldTwoWayStop | limitPriceDown = price |> decimalFromString } 
+                            } , Cmd.none )
+                    
+                    LimitPriceUpChanged price ->
+                        ( 
+                            { model 
+                            | twoWayStop = { oldTwoWayStop | limitPriceUp = price |> decimalFromString } 
+                            } , Cmd.none )
 
         FNoop ->
             ( model, Cmd.none )
@@ -157,8 +137,8 @@ updateFromBackend msg model =
         NewApiConnection apiConnection ->
             ( { model | apiConnection = apiConnection }, Cmd.none )
 
-        NewPositionConfig positionConfig ->
-            ( { model | positionConfig = positionConfig }, Cmd.none )
+        NewTwoWayStop twoWayStop ->
+            ( { model | twoWayStop = twoWayStop }, Cmd.none )
 
         AccountInfoFailure err ->
             let
@@ -211,39 +191,28 @@ view model =
                 , Input.button buttonStyle { onPress = Just ChangeApiConnection, label = text "Update API Connection" }
                 ]
 
-        positionConfigView = 
-            let
-                positionConfig = model.positionConfig |> Maybe.withDefault positionConfigDefault
-            in
-                column
-                    [ spacing 10 ]
-                    [ text "Position Config"
-                    , input
-                        SymbolChanged
-                        positionConfig.downStop.symbol
-                        "Enter the asset pair" "" 
-                    , input 
-                        StopPriceChanged 
-                        (positionConfig.upStop.stopPrice |> Decimal.toString) 
-                        "Enter the trigger price" "Up Stop Trigger Price"
-                        |> Element.map UpStopOrderChange
-                    , input 
-                        LimitPriceChanged 
-                        (positionConfig.upStop.limitPrice |> Decimal.toString) 
-                        "Enter the limit price" "Up Stop Limit Price"
-                        |> Element.map UpStopOrderChange
-                    , input
-                        StopPriceChanged 
-                        (positionConfig.downStop.stopPrice |> Decimal.toString) 
-                        "Enter the trigger price" "Down Stop Trigger Price"
-                        |> Element.map DownStopOrderChange
-                    , input
-                        LimitPriceChanged 
-                        (positionConfig.downStop.limitPrice |> Decimal.toString) 
-                        "Enter the limit price" "Down Stop Limit Price"
-                        |> Element.map DownStopOrderChange
-                    , Input.button buttonStyle { onPress = Just ChangePositionConfig, label = text "Update Position Config" }
-                    ]
+        twoWayStopView = 
+            column
+                [ spacing 10 ]
+                [ text "Position Config"
+                , input
+                    SymbolChanged
+                    model.twoWayStop.symbol
+                    "Enter the asset pair" "" 
+                , input 
+                    StopPriceChanged 
+                    (model.twoWayStop.stopPrice |> Decimal.toString) 
+                    "Enter the trigger price" "Stop Trigger Price"
+                , input 
+                    LimitPriceDownChanged 
+                    (model.twoWayStop.limitPriceDown |> Decimal.toString) 
+                    "Enter the limit price" "Down Limit Price"
+                , input
+                    StopPriceChanged 
+                    (model.twoWayStop.limitPriceUp |> Decimal.toString) 
+                    "Enter the trigger price" "Up Stop Trigger Price"
+                , Input.button buttonStyle { onPress = Just TwoWayStopChange, label = text "Update Two Way Stop" }
+                ]
 
         timeFromServer = 
             case model.serverTime of
@@ -272,7 +241,7 @@ view model =
                 , text (String.fromInt model.counter)
                 , button (CounterChange Decrement) "-" 
                 , apiView |> Element.map ApiConnectionChange
-                , positionConfigView |> Element.map PositionConfigChange
+                , twoWayStopView |> Element.map TwoWayStopChange
                 , timeFromServer
                 ]
 

@@ -16,40 +16,55 @@ type alias ApiConnection =
 
 type alias Asset = String
 
-type alias StopOrder = 
+type alias TwoWayStop = 
     { symbol : String
     , stopPrice : Decimal
-    , limitPrice : Decimal
-    , side : OrderSide
+    , limitPriceDown : Decimal
+    , limitPriceUp : Decimal
     }
 
+-- type alias StopOrder = 
+--     { symbol : String
+--     , stopPrice : Decimal
+--     , limitPrice : Decimal
+--     , side : OrderSide
+--     }
 
-type alias PositionConfig = 
-    { downStop : StopOrder 
-    , upStop : StopOrder
-    }
 
-positionConfigDefault : PositionConfig
-positionConfigDefault = 
-    { upStop = 
-        { symbol = ""
-        , stopPrice = Decimal.zero
-        , limitPrice = Decimal.zero 
-        , side = Buy
-        }   
-    , downStop = 
-        { symbol = ""
-        , stopPrice = Decimal.zero
-        , limitPrice = Decimal.zero 
-        , side = Buy
-        }
+-- type alias PositionConfig = 
+--     { downStop : StopOrder 
+--     , upStop : StopOrder
+--     }
+
+-- positionConfigDefault : PositionConfig
+-- positionConfigDefault = 
+--     { upStop = 
+--         { symbol = ""
+--         , stopPrice = Decimal.zero
+--         , limitPrice = Decimal.zero 
+--         , side = Buy
+--         }   
+--     , downStop = 
+--         { symbol = ""
+--         , stopPrice = Decimal.zero
+--         , limitPrice = Decimal.zero 
+--         , side = Buy
+--         }
+--     }
+
+twoWayStopDefault : TwoWayStop
+twoWayStopDefault = 
+    { symbol = ""
+    , stopPrice = Decimal.zero
+    , limitPriceDown = Decimal.zero 
+    , limitPriceUp = Decimal.zero 
     }
 
 
 type alias BackendModel =
     { counter : Int
     , apiConnection : ApiConnection
-    , positionConfig : Maybe PositionConfig -- initially assumes only 1 position with 100% of the funds
+    , twoWayStop : Maybe TwoWayStop -- initially assumes only 1 position with 100% of the funds
     , serverTime : Maybe Time.Posix
     }
 
@@ -58,7 +73,7 @@ type alias FrontendModel =
     { counter : Int
     , clientId : String
     , apiConnection : ApiConnection
-    , positionConfig : Maybe PositionConfig
+    , twoWayStop : TwoWayStop
     , serverTime : Maybe Time.Posix
     }
     
@@ -66,7 +81,7 @@ type alias FrontendModel =
 type FrontendMsg
     = CounterChange CounterMsg
     | ApiConnectionChange ApiConnectionMsg
-    | PositionConfigChange PositionConfigMsg
+    | TwoWayStopChange TwoWayStopMsg
     | FNoop
 
 
@@ -81,28 +96,40 @@ type ApiConnectionMsg
     | ChangeApiConnection
 
 
-type PositionConfigMsg
-    = DownStopOrderChange StopOrderMsg
-    | UpStopOrderChange StopOrderMsg
-    | SymbolChanged String
-    | ChangePositionConfig
+-- type PositionConfigMsg
+--     = DownStopOrderChange StopOrderMsg
+--     | UpStopOrderChange StopOrderMsg
+--     | SymbolChanged String
+--     | ChangePositionConfig
 
-
-type StopOrderMsg 
-    = StopSymbolChanged String
+type TwoWayStopMsg
+    = SymbolChanged String
     | StopPriceChanged String
-    | LimitPriceChanged String
+    | LimitPriceDownChanged String
+    | LimitPriceUpChanged String
+
+
+-- type StopOrderMsg 
+--     = StopSymbolChanged String
+--     | StopPriceChanged String
+--     | LimitPriceChanged String
 
 type OrderSide
     = Buy
     | Sell
 
 
+type OrderPlacements 
+    = None
+    | Up
+    | Down
+
+
 type ToBackend
     = CounterIncremented
     | CounterDecremented
     | ApiConnectionChanged ApiConnection
-    | PositionConfigChanged (Maybe PositionConfig)
+    | TwoWayStopChanged TwoWayStop
 
 
 type BackendMsg
@@ -116,7 +143,7 @@ type BackendMsg
 type ToFrontend
     = CounterNewValue Int String
     | NewApiConnection ApiConnection
-    | NewPositionConfig (Maybe PositionConfig)
+    | NewTwoWayStop TwoWayStop
     | AccountInfoSuccess JsonTranslation.AccountInfo.Root
     | AccountInfoFailure Http.Error
     | ServerTime Time.Posix

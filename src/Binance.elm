@@ -162,8 +162,6 @@ placeStopLossOrder :
     ApiConnection 
     -> StopOrder
     -> Decimal 
-    -> Decimal 
-    -> OrderSide 
     -> Task Http.Error JsonTranslation.PlaceOrder.Root
 placeStopLossOrder apiConnection stopOrder quantity =
     let
@@ -197,6 +195,27 @@ stringToDecimal : String -> Decimal
 stringToDecimal str =
     Decimal.fromIntString str |> Maybe.withDefault Decimal.zero
 
+
+
+outcomes upStop downStop price =
+    let
+        belowUpStop = Decimal.compare price upStop == LT
+        aboveDownStop = Decimal.compare price downStop == GT
+    in
+        case (belowUpStop, aboveDownStop) of
+            (True, True) ->
+                None
+
+            (False, True) ->
+                Up
+
+            (True, False) ->
+                Down
+
+            (False, False) ->
+                None
+
+
 -- resetStopOrder
 -- logic for this function:
 -- * get the price
@@ -210,21 +229,26 @@ stringToDecimal str =
 resetStopOrder : ApiConnection -> PositionConfig -> Task Http.Error JsonTranslation.PlaceOrder.Root
 resetStopOrder apiConnection positionConfig =
     let
-        placeStopLossOrderTask price = placeStopLossOrder apiConnection symbol price quantity side
+        quantity accountInfo =
+            List.filter (\x -> x.asset == positionConfig.upStop.symbol) accountInfo.balances
+            |> List.head
+            |> Maybe.withDefault { asset = "", free = "", locked = "" }
+            |> .free
+            |> stringToDecimal
     in
         getAccountInfo apiConnection
         |> Task.andThen (\accountInfo ->
-            getSymbolPrice positionConfig.symbol
+            getSymbolPrice positionConfig.upStop.symbol
             |> Task.andThen (\symbolPrice ->
-                cancelAllOpenOrders apiConnection positionConfig.symbol
+                cancelAllOpenOrders apiConnection positionConfig.upStop.symbol
                 |> Task.andThen (\_ ->
                     let
                         price = stringToDecimal symbolPrice.price
                     in
-                        if price < upStop.limitPrice then
-                            placeStopLossOrderTask upStop
-                        else if price > downStop.limitPrice then
-                            placeStopLossOrderTask downStop
+                        if Decimal.compare price positionConfig.upStop.stopPrice == LT then
+                            placeStopLossOrder apiConnection positionConfig.upStop (quantity accountInfo)
+                        else if Decimal.compare price positionConfig.downStop.stopPrice == GT then
+                            placeStopLossOrder apiConnection positionConfig.downStop (quantity accountInfo)
                         else
                             Task.succeed { orderId = 0, clientOrderId = "", transactTime = 0 }
                 )
