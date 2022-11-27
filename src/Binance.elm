@@ -107,7 +107,7 @@ getPrice symbol =
         , timeout = Nothing
         }
 
-cancelAllOpenOrders : ApiConnection -> String -> Task Http.Error JsonTranslation.DeleteOpenOrders.Root
+cancelAllOpenOrders : ApiConnection -> String -> Task Http.Error (List JsonTranslation.DeleteOpenOrders.Root)
 cancelAllOpenOrders apiConnection symbol =
     let
         signedParams timestamp = signParams apiConnection.secret timestamp ("symbol=" ++ symbol)
@@ -140,7 +140,7 @@ getOpenOrders apiConnection =
                     ]
                 , url = proxy ++ baseUrl ++ "openOrders" ++ "?" ++ signedParams timestamp
                 , body = Http.emptyBody
-                , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.OpenOrders.rootObjectDecoder
+                , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.OpenOrders.rootDecoder
                 , timeout = Nothing
                 }
     in
@@ -150,17 +150,17 @@ getOpenOrders apiConnection =
 
 -- This function makes sure that if the price is below the position config up stop
 -- that we are in cash and if the price is above the down stop, that we are in the asset
-calculateOrder : PositionConfig -> Decimal -> JsonTranslation.AccountInfo.Root -> Maybe Order
-calculateOrder positionConfig price accountInfo =
-    let
-        -- invariants:
-        -- if the price is below the down stop, then need to be in cash
-        --      if there is no stop loss, place one at the up stop
-        -- if the price is above the up stop, then need to be in the asset
-        --      if there is no stop loss, place one at the down stop
+-- calculateOrder : PositionConfig -> Decimal -> JsonTranslation.AccountInfo.Root -> Maybe Order
+-- calculateOrder positionConfig price accountInfo =
+--     let
+--         -- invariants:
+--         -- if the price is below the down stop, then need to be in cash
+--         --      if there is no stop loss, place one at the up stop
+--         -- if the price is above the up stop, then need to be in the asset
+--         --      if there is no stop loss, place one at the down stop
 
-        belowDownStop = price < positionConfig.downStop.limitPrice
-        aboveUpStop = price > positionConfig.upStop.limitPrice
+--         belowDownStop = price < positionConfig.downStop.limitPrice
+--         aboveUpStop = price > positionConfig.upStop.limitPrice
         
-    in
-        maybeOrder
+--     in
+--         maybeOrder
