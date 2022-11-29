@@ -27,7 +27,7 @@ init : ( Model, Cmd BackendMsg )
 init =
     ( { counter = 0 
       , apiConnection = PrivateConfig.apiConnection
-      , positionConfig = Nothing
+      , twoWayStop = twoWayStopDefault
       , serverTime = Nothing
       }
     , Cmd.none )
@@ -41,6 +41,7 @@ update msg model =
             , Cmd.batch 
                 [ sendToFrontend clientId <| CounterNewValue model.counter clientId
                 , sendToFrontend clientId <| NewApiConnection model.apiConnection
+                , sendToFrontend clientId <| NewTwoWayStop model.twoWayStop
                 ] )
 
         GetAccountInfo ->
@@ -85,13 +86,14 @@ updateFromFrontend sessionId clientId msg model =
                 , getAccountInfo apiConnection |> Task.attempt GotAccountInfo
                 ] )
 
-        PositionConfigChanged positionConfig ->
-            ( { model | positionConfig = positionConfig }
-            , broadcast (NewPositionConfig positionConfig)
+        TwoWayStopChanged twoWayStop ->
+            ( { model | twoWayStop = twoWayStop }
+            , broadcast (NewTwoWayStop twoWayStop) 
             )
+
 
 subscriptions model =
     Sub.batch
         [ Lamdera.onConnect ClientConnected
-        , Time.every 1000 Tick
+        , Time.every 20000 Tick
         ]

@@ -160,18 +160,26 @@ sideToString side =
 
 placeStopLossOrder : 
     ApiConnection 
-    -> StopOrder
+    -> TwoWayStop
+    -> OrderSide
     -> Decimal 
     -> Task Http.Error JsonTranslation.PlaceOrder.Root
-placeStopLossOrder apiConnection stopOrder quantity =
+placeStopLossOrder apiConnection stopOrder side quantity =
     let
+        limitPrice = 
+            case side of
+                Buy ->
+                    stopOrder.limitPriceUp
+
+                Sell ->
+                    stopOrder.limitPriceDown
         params = 
             "symbol=" ++ stopOrder.symbol
-            ++ "&side=" ++ sideToString stopOrder.side
+            ++ "&side=" ++ sideToString side
             ++ "&type=STOP_LOSS_LIMIT"
             ++ "&quantity=" ++ (Decimal.toString quantity)
             ++ "&stopPrice=" ++ (Decimal.toString stopOrder.stopPrice)
-            ++ "&price=" ++ (Decimal.toString stopOrder.limitPrice)
+            ++ "&price=" ++ (Decimal.toString limitPrice)
             ++ "&timeInForce=GTC"
         signedParams timestamp = signParams apiConnection.secret timestamp params
         placeStopLossOrderTask timestamp = 
@@ -226,31 +234,27 @@ outcomes upStop downStop price =
 --   * place the upStop order for the full cash balance from account info
 -- * if the price is above the downStop
 --   * place the downStop order for the full asset balance from account info
-resetStopOrder : ApiConnection -> PositionConfig -> Task Http.Error JsonTranslation.PlaceOrder.Root
-resetStopOrder apiConnection positionConfig =
+resetStopOrder : ApiConnection -> TwoWayStop -> Task Http.Error JsonTranslation.PlaceOrder.Root
+resetStopOrder apiConnection twoWayStop =
     let
         quantity accountInfo =
-            List.filter (\x -> x.asset == positionConfig.upStop.symbol) accountInfo.balances
-            |> List.head
-            |> Maybe.withDefault { asset = "", free = "", locked = "" }
-            |> .free
-            |> stringToDecimal
+            List.filter (\x -> x.asset == twoWayStop.symbol) accountInfo.balances
+            |> List.map (\x -> stringToDecimal x.free)
+            |> List.foldl Decimal.add Decimal.zero
     in
-        getAccountInfo apiConnection
-        |> Task.andThen (\accountInfo ->
-            getSymbolPrice positionConfig.upStop.symbol
-            |> Task.andThen (\symbolPrice ->
-                cancelAllOpenOrders apiConnection positionConfig.upStop.symbol
-                |> Task.andThen (\_ ->
+        getSymbolPrice twoWayStop.symbol
+        |> Task.andThen (\symbolPrice ->
+            cancelAllOpenOrders apiConnection twoWayStop.symbol
+            |> Task.andThen (\_ ->
+                getAccountInfo apiConnection
+                |> Task.andThen (\accountInfo ->
                     let
                         price = stringToDecimal symbolPrice.price
                     in
-                        if Decimal.compare price positionConfig.upStop.stopPrice == LT then
-                            placeStopLossOrder apiConnection positionConfig.upStop (quantity accountInfo)
-                        else if Decimal.compare price positionConfig.downStop.stopPrice == GT then
-                            placeStopLossOrder apiConnection positionConfig.downStop (quantity accountInfo)
-                        else
-                            Task.succeed { orderId = 0, clientOrderId = "", transactTime = 0 }
+                        if Decimal.compare price twoWayStop.stopPrice == LT then
+                            placeStopLossOrder apiConnection twoWayStop Buy (quantity accountInfo)
+                        else 
+                            placeStopLossOrder apiConnection twoWayStop Sell (quantity accountInfo)
                 )
             )
         )

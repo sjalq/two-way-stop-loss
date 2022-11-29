@@ -121,6 +121,9 @@ update msg model =
                             | twoWayStop = { oldTwoWayStop | limitPriceUp = price |> decimalFromString } 
                             } , Cmd.none )
 
+                    ChangeTwoWayStop ->
+                        ( model, sendToBackend (TwoWayStopChanged model.twoWayStop) )
+
         FNoop ->
             ( model, Cmd.none )
 
@@ -208,10 +211,10 @@ view model =
                     (model.twoWayStop.limitPriceDown |> Decimal.toString) 
                     "Enter the limit price" "Down Limit Price"
                 , input
-                    StopPriceChanged 
+                    LimitPriceUpChanged 
                     (model.twoWayStop.limitPriceUp |> Decimal.toString) 
                     "Enter the trigger price" "Up Stop Trigger Price"
-                , Input.button buttonStyle { onPress = Just TwoWayStopChange, label = text "Update Two Way Stop" }
+                , Input.button buttonStyle { onPress = Just ChangeTwoWayStop, label = text "Update Two Way Stop" }
                 ]
 
         timeFromServer = 
