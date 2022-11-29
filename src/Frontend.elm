@@ -164,11 +164,36 @@ updateFromBackend msg model =
             in
                 ( model, Cmd.none )
 
+        AccountInfoSuccess _ ->
+            ( model, Cmd.none )
+
+        ResetStopOrderFailure err ->
+            let
+                _ = 
+                    case err of 
+                        Http.BadUrl url ->
+                            Debug.log "BadUrl" url
+
+                        Http.Timeout ->
+                            Debug.log "Timeout" ""
+
+                        Http.NetworkError ->
+                            Debug.log "NetworkError" ""
+
+                        Http.BadStatus response ->
+                            Debug.log "BadStatus" <| String.fromInt response
+
+                        Http.BadBody body ->
+                            Debug.log "BadBody" body
+            in
+                ( model, Cmd.none )
+
+        ResetStopOrderSuccess _ ->
+            ( model, Cmd.none )
+
         ServerTime posix ->
             ( {model | serverTime = Just posix }, Cmd.none )
 
-        AccountInfoSuccess _ ->
-            ( model, Cmd.none )
         
 
 view : Model -> Html FrontendMsg

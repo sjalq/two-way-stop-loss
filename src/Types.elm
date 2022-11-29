@@ -7,6 +7,7 @@ import Http exposing (Error)
 import Decimal exposing (..)
 import Time
 import JsonTranslation.AccountInfo exposing (..)
+import JsonTranslation.PlaceOrder exposing (..)
 
 
 type alias ApiConnection =
@@ -99,7 +100,9 @@ type ToBackend
 type BackendMsg
     = ClientConnected SessionId ClientId
     | GetAccountInfo
-    | GotAccountInfo (Result Error JsonTranslation.AccountInfo.Root)    
+    | GetAccountInfoResponse (Result Error JsonTranslation.AccountInfo.Root)
+    | ResetStopOrder Time.Posix
+    | ResetStopOrderResponse (Result Error JsonTranslation.PlaceOrder.Root)
     | Tick Time.Posix
     | Noop
 
@@ -110,4 +113,6 @@ type ToFrontend
     | NewTwoWayStop TwoWayStop
     | AccountInfoSuccess JsonTranslation.AccountInfo.Root
     | AccountInfoFailure Http.Error
+    | ResetStopOrderSuccess JsonTranslation.PlaceOrder.Root
+    | ResetStopOrderFailure Http.Error
     | ServerTime Time.Posix

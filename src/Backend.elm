@@ -45,9 +45,9 @@ update msg model =
                 ] )
 
         GetAccountInfo ->
-            ( model, getAccountInfo model.apiConnection |> Task.attempt GotAccountInfo)
+            ( model, getAccountInfo model.apiConnection |> Task.attempt GetAccountInfoResponse)
 
-        GotAccountInfo accountInfo ->
+        GetAccountInfoResponse accountInfo ->
             case accountInfo of
                 Ok acc ->
                     ( model, broadcast <| AccountInfoSuccess acc )
@@ -57,6 +57,17 @@ update msg model =
 
         Tick posix ->
             ( model, broadcast <| ServerTime posix )
+
+        ResetStopOrder _ ->
+            ( model, (resetStopOrder model.apiConnection model.twoWayStop) |> Task.attempt ResetStopOrderResponse )
+
+        ResetStopOrderResponse stopOrder ->
+            case stopOrder of
+                Ok order ->
+                    ( model, broadcast <| ResetStopOrderSuccess order )
+
+                Err error ->
+                    ( model, broadcast <| ResetStopOrderFailure error ) 
 
         Noop ->
             ( model, Cmd.none )
@@ -83,7 +94,7 @@ updateFromFrontend sessionId clientId msg model =
             ( { model | apiConnection = apiConnection }
             , Cmd.batch 
                 [ broadcast (NewApiConnection apiConnection)
-                , getAccountInfo apiConnection |> Task.attempt GotAccountInfo
+                , getAccountInfo apiConnection |> Task.attempt GetAccountInfoResponse
                 ] )
 
         TwoWayStopChanged twoWayStop ->
@@ -96,4 +107,5 @@ subscriptions model =
     Sub.batch
         [ Lamdera.onConnect ClientConnected
         , Time.every 20000 Tick
+        , Time.every 10000 ResetStopOrder
         ]
