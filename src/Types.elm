@@ -83,6 +83,16 @@ type OrderSide
     = Buy
     | Sell
 
+type OrderType
+    = Market
+    | Limit
+    | Stop
+    | StopLimit
+    | MarketIfTouched
+    | LimitIfTouched
+    | MarketWithLeftOverAsLimit
+    | Pegged
+
 
 type OrderPlacements 
     = None
