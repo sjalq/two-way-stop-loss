@@ -23,6 +23,8 @@ import Helpers exposing (..)
 import Decimal exposing (Decimal)
 import Http
 import Time
+import Element.Border exposing (widthXY)
+import Browser.Dom exposing (blur)
 
 
 type alias Model =
@@ -194,6 +196,9 @@ updateFromBackend msg model =
         ServerTime posix ->
             ( {model | serverTime = Just posix }, Cmd.none )
 
+        Nope ->
+            ( model, Cmd.none )
+
         
 
 view : Model -> Html FrontendMsg
@@ -210,7 +215,7 @@ view model =
         
         apiView = 
             column 
-                []     
+                [ ]     
                 [ text "API Connection"
                 , input KeyChanged model.apiConnection.key "Enter your API key" "Key"
                 , input SecretChanged model.apiConnection.secret "Enter your API secret" "Secret"
@@ -264,7 +269,9 @@ view model =
             Input.button buttonStyle { onPress = Just msg, label = text label }
     in
         layout [ padding 10 ] <|
-            row [ spacing 10 ]
+            -- center align the elements of this column
+            
+            column [ spacing 10, centerX, centerY ]
                 [ button (CounterChange Increment) "+"
                 , text (String.fromInt model.counter)
                 , button (CounterChange Decrement) "-" 

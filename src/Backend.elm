@@ -29,6 +29,8 @@ init =
       , apiConnection = PrivateConfig.apiConnection
       , twoWayStop = twoWayStopDefault
       , serverTime = Nothing
+      , orderHistory = []
+      , accountValueOverTime = []
       }
     , Cmd.none )
 
@@ -45,7 +47,7 @@ update msg model =
                 ] )
 
         GetAccountInfo ->
-            ( model, getAccountInfo model.apiConnection |> Task.attempt GetAccountInfoResponse)
+            ( model, getAccountInfoTask model.apiConnection |> Task.attempt GetAccountInfoResponse)
 
         GetAccountInfoResponse accountInfo ->
             case accountInfo of
@@ -59,15 +61,50 @@ update msg model =
             ( model, broadcast <| ServerTime posix )
 
         ResetStopOrder _ ->
-            ( model, (resetStopOrder model.apiConnection model.twoWayStop) |> Task.attempt ResetStopOrderResponse )
+            ( model,
+                Cmd.batch 
+                [ (resetStopOrderTask model.apiConnection model.twoWayStop Buy) |> Task.attempt ResetStopOrderResponse 
+                , (resetStopOrderTask model.apiConnection model.twoWayStop Sell) |> Task.attempt ResetStopOrderResponse 
+                ]
+            )
 
         ResetStopOrderResponse stopOrder ->
             case stopOrder of
                 Ok order ->
-                    ( model, broadcast <| ResetStopOrderSuccess order )
+                    let 
+                        allOrders = Debug.log "All orders" (model.orderHistory ++ [ order ])
+                    in 
+                        ( { model | orderHistory = allOrders }
+                        , broadcast <| ResetStopOrderSuccess order )
 
                 Err error ->
+                    let 
+                        allOrders = Debug.log "All orders" (model.orderHistory)
+                    in 
                     ( model, broadcast <| ResetStopOrderFailure error ) 
+
+        CancelAllOrders _ ->
+            ( model, cancelAllOpenOrdersTask model.apiConnection model.twoWayStop.symbol |> Task.attempt CancelAllOrdersResponse )
+
+        CancelAllOrdersResponse cancelAllOrders ->
+            case cancelAllOrders of
+                Ok orders ->
+                    ( model, broadcast <| Nope )
+
+                Err error ->
+                    ( model, broadcast <| Nope )
+
+        CalculateAccountValue time ->
+            ( model, calculateAccountValueTask model.apiConnection |> Task.attempt (CalculateAccountValueResponse time) )
+
+        CalculateAccountValueResponse time accountValue ->
+            case accountValue of
+                Ok value ->
+                    ( { model | accountValueOverTime = model.accountValueOverTime ++ [{ time = time, value = value }] }
+                    , broadcast <| Nope )
+
+                Err error ->
+                    ( model, broadcast <| Nope )
 
         Noop ->
             ( model, Cmd.none )
@@ -94,12 +131,14 @@ updateFromFrontend sessionId clientId msg model =
             ( { model | apiConnection = apiConnection }
             , Cmd.batch 
                 [ broadcast (NewApiConnection apiConnection)
-                , getAccountInfo apiConnection |> Task.attempt GetAccountInfoResponse
+                , getAccountInfoTask apiConnection |> Task.attempt GetAccountInfoResponse
                 ] )
 
         TwoWayStopChanged twoWayStop ->
             ( { model | twoWayStop = twoWayStop }
-            , broadcast (NewTwoWayStop twoWayStop) 
+            , Cmd.batch 
+                [ broadcast (NewTwoWayStop twoWayStop) 
+                , cancelAllOpenOrdersTask model.apiConnection twoWayStop.symbol |> Task.attempt CancelAllOrdersResponse ]
             )
 
 
@@ -107,5 +146,7 @@ subscriptions model =
     Sub.batch
         [ Lamdera.onConnect ClientConnected
         , Time.every 20000 Tick
-        , Time.every 10000 ResetStopOrder
+        , Time.every 20000 ResetStopOrder
+        -- , Time.every 30000 CancelAllOrders
+        , Time.every 60000 CalculateAccountValue
         ]

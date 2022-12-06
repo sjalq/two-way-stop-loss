@@ -8,6 +8,7 @@ import Decimal exposing (..)
 import Time
 import JsonTranslation.AccountInfo exposing (..)
 import JsonTranslation.PlaceOrder exposing (..)
+import JsonTranslation.DeleteOpenOrders exposing (..)
 
 
 type alias ApiConnection =
@@ -35,12 +36,19 @@ twoWayStopDefault =
     , limitPriceUp = Decimal.zero 
     }
 
+type alias AccountValueAtTime = 
+    { time : Time.Posix
+    , value : Decimal
+    }
+
 
 type alias BackendModel =
     { counter : Int
     , apiConnection : ApiConnection
     , twoWayStop : TwoWayStop 
     , serverTime : Maybe Time.Posix
+    , orderHistory : List JsonTranslation.PlaceOrder.Root
+    , accountValueOverTime : List AccountValueAtTime
     }
 
 
@@ -112,7 +120,11 @@ type BackendMsg
     | GetAccountInfo
     | GetAccountInfoResponse (Result Error JsonTranslation.AccountInfo.Root)
     | ResetStopOrder Time.Posix
+    | CancelAllOrders Time.Posix
     | ResetStopOrderResponse (Result Error JsonTranslation.PlaceOrder.Root)
+    | CancelAllOrdersResponse (Result Error (List JsonTranslation.DeleteOpenOrders.Root))
+    | CalculateAccountValue Time.Posix
+    | CalculateAccountValueResponse Time.Posix (Result Error Decimal)
     | Tick Time.Posix
     | Noop
 
@@ -126,3 +138,4 @@ type ToFrontend
     | ResetStopOrderSuccess JsonTranslation.PlaceOrder.Root
     | ResetStopOrderFailure Http.Error
     | ServerTime Time.Posix
+    | Nope

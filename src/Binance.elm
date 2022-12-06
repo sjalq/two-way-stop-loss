@@ -11,10 +11,11 @@ import PrivateConfig exposing (apiConnection)
 import Decimal exposing (Decimal)
 import JsonTranslation.Time exposing (..)
 import JsonTranslation.AccountInfo exposing (..)
-import JsonTranslation.SymbolPrice exposing (..)
+import JsonTranslation.SymbolPrices exposing (..)
 import JsonTranslation.DeleteOpenOrders exposing (..)
 import JsonTranslation.OpenOrders exposing (..)
 import JsonTranslation.PlaceOrder exposing (..)
+import List.Extra exposing (..)
 
 proxy : String
 proxy = 
@@ -65,8 +66,8 @@ signParams secretKey timestamp paramString =
         timestampedParams ++ "&signature=" ++ sign timestampedParams
 
 
-getAccountInfo : ApiConnection -> Task Http.Error JsonTranslation.AccountInfo.Root
-getAccountInfo apiConnection =
+getAccountInfoTask : ApiConnection -> Task Http.Error JsonTranslation.AccountInfo.Root
+getAccountInfoTask apiConnection =
     let
         signedParams timestamp = signParams apiConnection.secret timestamp ""
         fetchAccountTask timestamp = 
@@ -97,22 +98,22 @@ getTimestampTask =
         , timeout = Nothing
         }
 
-getSymbolPrice : String -> Task Http.Error JsonTranslation.SymbolPrice.Root
-getSymbolPrice symbol =
+getSymbolPriceTask : String -> Task Http.Error JsonTranslation.SymbolPrices.RootObject
+getSymbolPriceTask symbol =
     Http.task
         { method = "GET"
         , headers = []
         , url = proxy ++ baseUrl ++ "ticker/price?symbol=" ++ symbol
         , body = Http.emptyBody
-        , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.SymbolPrice.rootDecoder
+        , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.SymbolPrices.rootObjectDecoder
         , timeout = Nothing
         }
 
-cancelAllOpenOrders : ApiConnection -> String -> Task Http.Error (List JsonTranslation.DeleteOpenOrders.Root)
-cancelAllOpenOrders apiConnection symbol =
+cancelAllOpenOrdersTask : ApiConnection -> String -> Task Http.Error (List JsonTranslation.DeleteOpenOrders.Root)
+cancelAllOpenOrdersTask apiConnection symbol =
     let
         signedParams timestamp = signParams apiConnection.secret timestamp ("symbol=" ++ symbol)
-        cancelAllOpenOrdersTask timestamp = 
+        cancelAllOpenOrdersTask_ timestamp = 
             Http.task
                 { method = "DELETE"
                 , headers = 
@@ -126,12 +127,12 @@ cancelAllOpenOrders apiConnection symbol =
                 }
     in
         getTimestampTask
-        |> Task.andThen cancelAllOpenOrdersTask
+        |> Task.andThen cancelAllOpenOrdersTask_
 
-getOpenOrders : ApiConnection -> Task Http.Error (List JsonTranslation.OpenOrders.RootObject)
-getOpenOrders apiConnection =
+getOpenOrdersTask : ApiConnection -> String -> Task Http.Error (List JsonTranslation.OpenOrders.RootObject)
+getOpenOrdersTask apiConnection symbol =
     let
-        signedParams timestamp = signParams apiConnection.secret timestamp ""
+        signedParams timestamp = signParams apiConnection.secret timestamp ("symbol=" ++ symbol)
         fetchOpenOrdersTask timestamp = 
             Http.task
                 { method = "GET"
@@ -158,13 +159,13 @@ sideToString side =
         Sell ->
             "SELL"
 
-placeStopLossOrder : 
+placeStopLossOrderTask : 
     ApiConnection 
     -> TwoWayStop
     -> OrderSide
     -> Decimal 
     -> Task Http.Error JsonTranslation.PlaceOrder.Root
-placeStopLossOrder apiConnection stopOrder side quantity =
+placeStopLossOrderTask apiConnection stopOrder side quantity =
     let
         limitPrice = 
             case side of
@@ -177,12 +178,12 @@ placeStopLossOrder apiConnection stopOrder side quantity =
             "symbol=" ++ stopOrder.symbol
             ++ "&side=" ++ sideToString side
             ++ "&type=STOP_LOSS_LIMIT"
-            ++ "&quantity=" ++ (Decimal.toString quantity)
-            ++ "&stopPrice=" ++ (Decimal.toString stopOrder.stopPrice)
+            ++ "&quantity=" ++ (quantity |> Decimal.truncate -4 |> Decimal.toString)
+            ++ "&stopPrice=" ++ (stopOrder.stopPrice |> Decimal.truncate -4 |> Decimal.toString)
             ++ "&price=" ++ (Decimal.toString limitPrice)
             ++ "&timeInForce=GTC"
         signedParams timestamp = signParams apiConnection.secret timestamp params
-        placeStopLossOrderTask timestamp = 
+        placeStopLossOrderTask_ timestamp = 
             Http.task
                 { method = "POST"
                 , headers = 
@@ -196,65 +197,167 @@ placeStopLossOrder apiConnection stopOrder side quantity =
                 }
     in
         getTimestampTask
-        |> Task.andThen placeStopLossOrderTask
+        |> Task.andThen placeStopLossOrderTask_
+
+placeMarketOrderTask : 
+    ApiConnection 
+    -> TwoWayStop
+    -> OrderSide
+    -> Decimal 
+    -> Decimal
+    -> Task Http.Error JsonTranslation.PlaceOrder.Root
+placeMarketOrderTask apiConnection stopOrder side quantity quoteOrderQty =
+    let
+        _ = Debug.log "-----------------------------quoteOrderQty" (quoteOrderQty |> Decimal.toString)
+        _ = Debug.log "-----------------------------quantity" (quantity |> Decimal.toString)
+        _ = Debug.log "-----------------------------side" side
+        quoteOrQuantityParam = 
+            case side of
+                Buy ->
+                    "&quoteOrderQty=" ++ (quoteOrderQty |> Decimal.truncate -4 |> Decimal.toString)
+
+                Sell ->
+                    "&quantity=" ++ (quantity |> Decimal.truncate -4 |> Decimal.toString)
+        params = 
+            "symbol=" ++ stopOrder.symbol
+            ++ "&side=" ++ sideToString side
+            ++ "&type=MARKET"
+            ++ quoteOrQuantityParam
+        signedParams timestamp = signParams apiConnection.secret timestamp params
+        placeLimitOrderTask timestamp = 
+            Http.task
+                { method = "POST"
+                , headers = 
+                    [ Http.header "X-MBX-APIKEY" apiConnection.key 
+                    , Http.header "Content-Type" "application/json" 
+                    ]
+                , url = proxy ++ baseUrl ++ "order" ++ "?" ++ signedParams timestamp
+                , body = Http.emptyBody
+                , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.PlaceOrder.rootDecoder
+                , timeout = Nothing
+                }
+    in
+        getTimestampTask
+        |> Task.andThen placeLimitOrderTask
+
+placeBestOrderTask : 
+    ApiConnection 
+    -> TwoWayStop
+    -> OrderSide
+    -> Decimal 
+    -> Decimal
+    -> Decimal
+    -> Task Http.Error JsonTranslation.PlaceOrder.Root
+placeBestOrderTask apiConnection stopOrder side quantity quoteOrderQty currentPrice =
+    let 
+        priceCmprStopPrice = Decimal.compare currentPrice stopOrder.stopPrice 
+    in
+        case (priceCmprStopPrice, side) of
+            (GT, Buy) ->
+                placeMarketOrderTask apiConnection stopOrder side quantity quoteOrderQty
+
+            (LT, Sell) ->
+                placeMarketOrderTask apiConnection stopOrder side quantity quoteOrderQty
+
+            (_, _) ->
+                placeStopLossOrderTask apiConnection stopOrder side quantity
 
 
 stringToDecimal : String -> Decimal
 stringToDecimal str =
     Decimal.fromIntString str |> Maybe.withDefault Decimal.zero
 
+isSymbolAsset : String -> String -> Bool
+isSymbolAsset symbol asset =
+    String.startsWith asset symbol
+
+isDenominatingAsset : String -> String -> Bool
+isDenominatingAsset symbol asset =
+    String.endsWith asset symbol
 
 
-outcomes upStop downStop price =
+resetStopOrderTask : ApiConnection -> TwoWayStop -> OrderSide -> Task Http.Error JsonTranslation.PlaceOrder.Root
+resetStopOrderTask apiConnection twoWayStop orderSide =
     let
-        belowUpStop = Decimal.compare price upStop == LT
-        aboveDownStop = Decimal.compare price downStop == GT
+        sumFreeBalances filter accountInfo=
+            accountInfo.balances
+            |> List.filter (\balance -> filter balance.asset)
+            |> List.map (\balance -> stringToDecimal balance.free)
+            |> List.foldl Decimal.add Decimal.zero
+
+        assetQuantityToSell =
+            sumFreeBalances (isSymbolAsset twoWayStop.symbol)
+
+        assetQuantityToBuy price accountInfo =  
+            price
+            |> Decimal.fastdiv (sumFreeBalances (isDenominatingAsset twoWayStop.symbol) accountInfo)
+            |> Maybe.withDefault Decimal.zero
     in
-        case (belowUpStop, aboveDownStop) of
-            (True, True) ->
-                None
-
-            (False, True) ->
-                Up
-
-            (True, False) ->
-                Down
-
-            (False, False) ->
-                None
+        getAccountInfoTask apiConnection
+        |> Task.andThen (\accountInfo ->
+            case orderSide of 
+                Buy ->
+                    placeStopLossOrderTask apiConnection twoWayStop orderSide (assetQuantityToBuy twoWayStop.limitPriceUp accountInfo)
+                Sell ->
+                    placeStopLossOrderTask apiConnection twoWayStop orderSide (assetQuantityToSell accountInfo)
+        )
 
 
--- resetStopOrder
--- logic for this function:
--- * get the price
--- * close existing order for the symbol pair
--- * get the balances from accountInfo
--- * get the price
--- * if the price is below the upStop
---   * place the upStop order for the full cash balance from account info
--- * if the price is above the downStop
---   * place the downStop order for the full asset balance from account info
-resetStopOrder : ApiConnection -> TwoWayStop -> Task Http.Error JsonTranslation.PlaceOrder.Root
-resetStopOrder apiConnection twoWayStop =
+fetchUsdtSymbolPricesTask : List String -> Task Http.Error (List JsonTranslation.SymbolPrices.RootObject)
+fetchUsdtSymbolPricesTask symbols =
     let
-        quantity accountInfo =
-            List.filter (\x -> x.asset == twoWayStop.symbol) accountInfo.balances
-            |> List.map (\x -> stringToDecimal x.free)
+        symbolsString = 
+            "[" ++
+            (symbols
+            |> List.map (\symbol -> "\"" ++ symbol ++ "USDT" ++ "\"")
+            |> String.join ",")
+            ++ "]"
+
+        params = "symbols=" ++ symbolsString
+
+    in
+        Http.task
+            { method = "GET"
+            , headers = 
+                [ Http.header "Content-Type" "application/json" 
+                ]
+            , url = proxy ++ baseUrl ++ "ticker/price" ++ "?" ++ params
+            , body = Http.emptyBody
+            , resolver = Http.stringResolver <| handleJsonResponse <| JsonTranslation.SymbolPrices.rootDecoder
+            , timeout = Nothing
+            }
+
+calculateAccountValueTask : ApiConnection -> Task Http.Error Decimal
+calculateAccountValueTask apiConnection =
+    let
+        assetTotal balance price =
+            stringToDecimal balance.free
+            |> Decimal.add (stringToDecimal balance.locked)
+            |> Decimal.mul (stringToDecimal price)
+
+        totalValue : JsonTranslation.AccountInfo.Root -> List JsonTranslation.SymbolPrices.RootObject -> Decimal
+        totalValue accountInfo symbolPrices = 
+            List.Extra.joinOn 
+                (\balance symbolPrice -> { key = symbolPrice.symbol, value = assetTotal balance symbolPrice.price } )
+                (\balance -> balance.asset ++ "USDT")
+                (\symbolPrice -> symbolPrice.symbol)
+                accountInfo.balances
+                symbolPrices
+            |> List.map (\{ key, value } -> value)
             |> List.foldl Decimal.add Decimal.zero
     in
-        getSymbolPrice twoWayStop.symbol
-        |> Task.andThen (\symbolPrice ->
-            cancelAllOpenOrders apiConnection twoWayStop.symbol
-            |> Task.andThen (\_ ->
-                getAccountInfo apiConnection
-                |> Task.andThen (\accountInfo ->
-                    let
-                        price = stringToDecimal symbolPrice.price
-                    in
-                        if Decimal.compare price twoWayStop.stopPrice == LT then
-                            placeStopLossOrder apiConnection twoWayStop Buy (quantity accountInfo)
-                        else 
-                            placeStopLossOrder apiConnection twoWayStop Sell (quantity accountInfo)
-                )
+        getAccountInfoTask apiConnection
+        |> Task.andThen (\accountInfo ->
+            accountInfo.balances 
+            |> List.map (\balance -> balance.asset) 
+            |> fetchUsdtSymbolPricesTask
+            |> Task.andThen (\symbolPrices ->
+                totalValue accountInfo symbolPrices
+                |> Task.succeed
             )
         )
+
+
+
+
+
