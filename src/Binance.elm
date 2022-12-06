@@ -16,6 +16,7 @@ import JsonTranslation.DeleteOpenOrders exposing (..)
 import JsonTranslation.OpenOrders exposing (..)
 import JsonTranslation.PlaceOrder exposing (..)
 import List.Extra exposing (..)
+import Element exposing (Device)
 
 proxy : String
 proxy = 
@@ -309,9 +310,12 @@ fetchUsdtSymbolPricesTask symbols =
         symbolsString = 
             "[" ++
             (symbols
-            |> List.map (\symbol -> "\"" ++ symbol ++ "USDT" ++ "\"")
+            |> List.filter (\symbol -> ["USDT", "BUSD"] |> List.member symbol |> not)
+            |> List.map (\symbol -> "\"" ++ symbol ++ "USDT\"")
             |> String.join ",")
             ++ "]"
+
+        _ = Debug.log "symbolsString" (symbolsString |> String.replace "\\" "")
 
         params = "symbols=" ++ symbolsString
 
@@ -345,6 +349,13 @@ calculateAccountValueTask apiConnection =
                 symbolPrices
             |> List.map (\{ key, value } -> value)
             |> List.foldl Decimal.add Decimal.zero
+            |> Decimal.add (usdtValue accountInfo)
+
+        usdtValue accountInfo =
+            accountInfo.balances
+            |> List.filter (\balance -> ["USDT", "BUSD"] |> List.member balance.asset)
+            |> List.map (\balance -> assetTotal balance "1")
+            |> List.foldl Decimal.add Decimal.zero
     in
         getAccountInfoTask apiConnection
         |> Task.andThen (\accountInfo ->
@@ -352,12 +363,14 @@ calculateAccountValueTask apiConnection =
             |> List.map (\balance -> balance.asset) 
             |> fetchUsdtSymbolPricesTask
             |> Task.andThen (\symbolPrices ->
-                totalValue accountInfo symbolPrices
-                |> Task.succeed
+                let
+                    _ = Debug.log "accountInfo" accountInfo
+                    _ = Debug.log "symbolPrices" symbolPrices
+                in
+                    totalValue accountInfo symbolPrices
+                    |> Task.succeed
             )
         )
-
-
 
 
 

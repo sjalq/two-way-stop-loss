@@ -8,6 +8,7 @@ import Html exposing (time)
 import PrivateConfig
 import Task
 import Time
+import Decimal
 
 
 type alias Model =
@@ -71,16 +72,10 @@ update msg model =
         ResetStopOrderResponse stopOrder ->
             case stopOrder of
                 Ok order ->
-                    let 
-                        allOrders = Debug.log "All orders" (model.orderHistory ++ [ order ])
-                    in 
-                        ( { model | orderHistory = allOrders }
-                        , broadcast <| ResetStopOrderSuccess order )
+                    ( { model | orderHistory = model.orderHistory ++ [ order ] }
+                    , broadcast <| ResetStopOrderSuccess order )
 
                 Err error ->
-                    let 
-                        allOrders = Debug.log "All orders" (model.orderHistory)
-                    in 
                     ( model, broadcast <| ResetStopOrderFailure error ) 
 
         CancelAllOrders _ ->
@@ -100,8 +95,12 @@ update msg model =
         CalculateAccountValueResponse time accountValue ->
             case accountValue of
                 Ok value ->
-                    ( { model | accountValueOverTime = model.accountValueOverTime ++ [{ time = time, value = value }] }
-                    , broadcast <| Nope )
+                    let
+                        currentValue = { time = time, value = value }
+                        _ = Debug.log "Current value" (currentValue.value |> Decimal.toString)
+                    in
+                        ( { model | accountValueOverTime = model.accountValueOverTime ++ [currentValue] }
+                        , broadcast <| Nope )
 
                 Err error ->
                     ( model, broadcast <| Nope )
@@ -148,5 +147,5 @@ subscriptions model =
         , Time.every 20000 Tick
         , Time.every 20000 ResetStopOrder
         -- , Time.every 30000 CancelAllOrders
-        , Time.every 60000 CalculateAccountValue
+        , Time.every 10000 CalculateAccountValue
         ]
