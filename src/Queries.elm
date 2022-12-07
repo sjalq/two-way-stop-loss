@@ -19,4 +19,4 @@ assetValueChange model =
             |> List.Extra.last 
             |> Maybe.withDefault Decimal.zero
     in
-        Decimal.sub firstValue lastValue
+        firstValue |> Decimal.sub lastValue
