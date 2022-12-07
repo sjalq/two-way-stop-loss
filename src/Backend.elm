@@ -9,7 +9,7 @@ import PrivateConfig
 import Task
 import Time
 import Decimal
-
+import Queries
 
 type alias Model =
     BackendModel
@@ -98,6 +98,7 @@ update msg model =
                     let
                         currentValue = { time = time, value = value }
                         _ = Debug.log "Current value" (currentValue.value |> Decimal.toString)
+                        _ = Debug.log "Diff" (Queries.assetValueChange model |> Decimal.toString)
                     in
                         ( { model | accountValueOverTime = model.accountValueOverTime ++ [currentValue] }
                         , broadcast <| Nope )
