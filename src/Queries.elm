@@ -10,7 +10,7 @@ assetValueChange model =
         firstValue = 
             model.accountValueOverTime 
             |> List.map .value 
-            |> List.filter (\value -> (value |> Decimal.toFloat) > 200000.0)
+            |> List.filter (\value -> (value |> Decimal.toFloat) > 100000.0)
             |> List.head 
             |> Maybe.withDefault Decimal.zero
         lastValue = 
