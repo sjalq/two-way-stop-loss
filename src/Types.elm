@@ -9,11 +9,17 @@ import Time
 import JsonTranslation.AccountInfo exposing (..)
 import JsonTranslation.PlaceOrder exposing (..)
 import JsonTranslation.DeleteOpenOrders exposing (..)
+import Env
 
 
 type alias ApiConnection =
     { key : String
     , secret : String
+    }
+
+apiConnection =
+    { key = Env.apiConnectionKey
+    , secret = Env.apiConnectionSecret
     }
 
 

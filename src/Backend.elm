@@ -5,11 +5,11 @@ import Set exposing (Set)
 import Types exposing (..)
 import Binance exposing (..)
 import Html exposing (time)
-import PrivateConfig
 import Task
 import Time
 import Decimal
 import Queries
+import Env exposing (apiConnectionKey)
 
 type alias Model =
     BackendModel
@@ -27,7 +27,7 @@ app =
 init : ( Model, Cmd BackendMsg )
 init =
     ( { counter = 0 
-      , apiConnection = PrivateConfig.apiConnection
+      , apiConnection = apiConnection
       , twoWayStop = twoWayStopDefault
       , serverTime = Nothing
       , orderHistory = []
