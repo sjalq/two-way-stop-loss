@@ -4,6 +4,10 @@ module Env exposing (..)
 -- See https://dashboard.lamdera.app/docs/environment for more info.
 
 
+-- type Env = Production | Development
+
+-- mode = Development
+
 dummyConfigItem = 
   ""
 

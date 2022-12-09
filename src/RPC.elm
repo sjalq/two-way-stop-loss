@@ -9,7 +9,13 @@ import Types exposing (..)
 import Json.Decode as D
 import Json.Encode as E
 import Json.Decode.Pipeline exposing (required)
-
+import JsonTranslation.AccountValueAtTimeJson exposing (..)
+import JsonTranslation.DateRange
+import JsonTranslation.AccountValueAtTimeJson
+import Queries exposing (getAccountValuesOverTime)
+import Iso8601
+import Time
+import Decimal
 
 reverse : SessionId -> BackendModel -> String -> ( RPC String, BackendModel, Cmd msg )
 reverse sessionId model input =
@@ -33,9 +39,65 @@ lamdera_handleEndpoints args model =
         "exampleJson" ->
             LamderaRPC.handleEndpointJson exampleJson args model
 
+        "myCrayCrayQuery" ->
+            LamderaRPC.handleEndpointJson myCrayCrayQuery args model
+
         _ ->
             ( LamderaRPC.ResultFailure <| Http.BadBody <| "Unknown endpoint " ++ args.endpoint, model, Cmd.none )
 
+
+myCrayCrayQuery : SessionId -> BackendModel -> E.Value -> (Result Http.Error E.Value, BackendModel, Cmd msg)
+myCrayCrayQuery sessionId model jsonArg =
+    let
+        decoder = JsonTranslation.DateRange.rootDecoder
+        encoder = JsonTranslation.AccountValueAtTimeJson.encodedRoot
+    in
+    case D.decodeValue decoder jsonArg of
+        Ok dateRange ->
+            let
+                fromTime = 
+                    dateRange.from 
+                    |> Iso8601.toTime 
+                    |> Result.mapError (\_ -> "Invalid fromDate")
+                
+                toTime = 
+                    dateRange.to
+                    |> Iso8601.toTime 
+                    |> Result.mapError (\_ -> "Invalid toDate")
+
+                result =
+                    Result.map2 
+                        (getAccountValuesOverTime model)
+                        fromTime
+                        toTime
+
+                accountValuesToResultType valAtTime =
+                   { posixTime = Time.posixToMillis valAtTime.time, usdtValue = Decimal.toFloat valAtTime.value }
+
+            in
+            case result of
+                Ok accountValues ->
+                    ( Ok <| encoder <| (accountValues |> List.map accountValuesToResultType)
+                    , model
+                    , Cmd.none
+                    )
+
+                Err err ->
+                    ( Err <| Http.BadBody <|
+                        "Failed to decode arg for [json] "
+                            ++ "myCrayCrayQuery "
+                            ++ err
+                    , model
+                    , Cmd.none)
+        
+        Err err ->
+            ( Err <| Http.BadBody <|
+                "Failed to decode arg for [json] "
+                    ++ "myCrayCrayQuery "
+                    ++ D.errorToString err
+            , model
+            , Cmd.none)
+    
 
 -- Define the handler
 exampleJson : SessionId -> BackendModel -> E.Value -> ( Result Http.Error E.Value, BackendModel, Cmd msg )
@@ -54,6 +116,7 @@ exampleJson sessionId model jsonArg =
             , model
             , Cmd.none
             )
+
 
         Err err ->
             ( Err <| Http.BadBody <|

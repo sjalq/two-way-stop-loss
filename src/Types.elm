@@ -9,17 +9,12 @@ import Time
 import JsonTranslation.AccountInfo exposing (..)
 import JsonTranslation.PlaceOrder exposing (..)
 import JsonTranslation.DeleteOpenOrders exposing (..)
-import Env
+import JsonTranslation.AccountValueAtTimeJson exposing (..)
 
 
 type alias ApiConnection =
     { key : String
     , secret : String
-    }
-
-apiConnection =
-    { key = Env.apiConnectionKey
-    , secret = Env.apiConnectionSecret
     }
 
 
@@ -33,6 +28,11 @@ type alias TwoWayStop =
     , limitPriceUp : Decimal
     }
 
+type alias AccountValueAtTime =
+    { time : Time.Posix
+    , value : Decimal
+    }
+
 
 twoWayStopDefault : TwoWayStop
 twoWayStopDefault = 
@@ -40,11 +40,6 @@ twoWayStopDefault =
     , stopPrice = Decimal.zero
     , limitPriceDown = Decimal.zero 
     , limitPriceUp = Decimal.zero 
-    }
-
-type alias AccountValueAtTime = 
-    { time : Time.Posix
-    , value : Decimal
     }
 
 

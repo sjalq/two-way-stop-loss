@@ -9,7 +9,7 @@ import Task
 import Time
 import Decimal
 import Queries
-import Env exposing (apiConnectionKey)
+import Env 
 
 type alias Model =
     BackendModel
@@ -27,12 +27,15 @@ app =
 init : ( Model, Cmd BackendMsg )
 init =
     ( { counter = 0 
-      , apiConnection = apiConnection
+      , apiConnection = 
+            { key = Env.apiConnectionKey
+            , secret = Env.apiConnectionSecret 
+            }
       , twoWayStop = twoWayStopDefault
       , serverTime = Nothing
       , orderHistory = []
       , accountValueOverTime = []
-      }
+    }
     , Cmd.none )
 
 
