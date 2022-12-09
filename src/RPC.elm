@@ -42,9 +42,16 @@ lamdera_handleEndpoints args model =
         "myCrayCrayQuery" ->
             LamderaRPC.handleEndpointJson myCrayCrayQuery args model
 
+        "getPnL" ->
+            LamderaRPC.handleEndpointJson getPnL args model
+
         _ ->
             ( LamderaRPC.ResultFailure <| Http.BadBody <| "Unknown endpoint " ++ args.endpoint, model, Cmd.none )
 
+
+getPnL : SessionId -> BackendModel -> E.Value -> (Result Http.Error E.Value, BackendModel, Cmd msg)
+getPnL sessionId model jsonArg =
+    (Queries.getPnL model |> E.string |> Ok , model, Cmd.none)
 
 myCrayCrayQuery : SessionId -> BackendModel -> E.Value -> (Result Http.Error E.Value, BackendModel, Cmd msg)
 myCrayCrayQuery sessionId model jsonArg =
@@ -103,6 +110,8 @@ myCrayCrayQuery sessionId model jsonArg =
 exampleJson : SessionId -> BackendModel -> E.Value -> ( Result Http.Error E.Value, BackendModel, Cmd msg )
 exampleJson sessionId model jsonArg =
     let
+
+        _ = Debug.log "exampleJson" jsonArg
         decoder =
             D.succeed identity
                 |> required "name" D.string
