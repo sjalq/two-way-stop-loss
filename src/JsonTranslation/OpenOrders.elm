@@ -4,6 +4,7 @@ import Json.Decode
 import Json.Encode
 
 
+
 -- Required packages:
 -- * elm/json
 
@@ -31,14 +32,14 @@ type alias RootObject =
 
 
 rootDecoder : Json.Decode.Decoder (List RootObject)
-rootDecoder = 
+rootDecoder =
     Json.Decode.list rootObjectDecoder
 
 
 rootObjectDecoder : Json.Decode.Decoder RootObject
-rootObjectDecoder = 
+rootObjectDecoder =
     let
-        fieldSet0 = 
+        fieldSet0 =
             Json.Decode.map8 RootObject
                 (Json.Decode.field "clientOrderId" Json.Decode.string)
                 (Json.Decode.field "cummulativeQuoteQty" Json.Decode.string)
@@ -73,7 +74,7 @@ encodedRoot root =
 
 
 encodedRootObject : RootObject -> Json.Encode.Value
-encodedRootObject rootObject = 
+encodedRootObject rootObject =
     Json.Encode.object
         [ ( "clientOrderId", Json.Encode.string rootObject.clientOrderId )
         , ( "cummulativeQuoteQty", Json.Encode.string rootObject.cummulativeQuoteQty )

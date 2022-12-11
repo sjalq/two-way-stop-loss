@@ -1,8 +1,8 @@
 module JsonTranslation.PlaceOrder exposing (..)
 
-
 import Json.Decode
 import Json.Encode
+
 
 
 -- Required packages:
@@ -19,7 +19,7 @@ type alias Root =
 
 
 rootDecoder : Json.Decode.Decoder Root
-rootDecoder = 
+rootDecoder =
     Json.Decode.map5 Root
         (Json.Decode.field "clientOrderId" Json.Decode.string)
         (Json.Decode.field "orderId" Json.Decode.int)
@@ -29,7 +29,7 @@ rootDecoder =
 
 
 encodedRoot : Root -> Json.Encode.Value
-encodedRoot root = 
+encodedRoot root =
     Json.Encode.object
         [ ( "clientOrderId", Json.Encode.string root.clientOrderId )
         , ( "orderId", Json.Encode.int root.orderId )

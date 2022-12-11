@@ -4,6 +4,7 @@ import Json.Decode
 import Json.Encode
 
 
+
 -- Required packages:
 -- * elm/json
 
@@ -93,12 +94,12 @@ type alias RootMemberOrdersObject =
 
 
 rootDecoder : Json.Decode.Decoder (List Root)
-rootDecoder = 
+rootDecoder =
     Json.Decode.list rootItemDecoder
 
 
 rootItemDecoder : Json.Decode.Decoder Root
-rootItemDecoder = 
+rootItemDecoder =
     Json.Decode.oneOf
         [ Json.Decode.map Root0 <| rootObjectDecoder
         , Json.Decode.map Root1 <| rootMemberDecoder
@@ -106,9 +107,9 @@ rootItemDecoder =
 
 
 rootObjectDecoder : Json.Decode.Decoder RootObject
-rootObjectDecoder = 
+rootObjectDecoder =
     let
-        fieldSet0 = 
+        fieldSet0 =
             Json.Decode.map8 RootObject
                 (Json.Decode.field "clientOrderId" Json.Decode.string)
                 (Json.Decode.field "cummulativeQuoteQty" Json.Decode.string)
@@ -129,9 +130,9 @@ rootObjectDecoder =
 
 
 rootMemberDecoder : Json.Decode.Decoder RootMember
-rootMemberDecoder = 
+rootMemberDecoder =
     let
-        fieldSet0 = 
+        fieldSet0 =
             Json.Decode.map8 RootMember
                 (Json.Decode.field "contingencyType" Json.Decode.string)
                 (Json.Decode.field "listClientOrderId" Json.Decode.string)
@@ -148,7 +149,7 @@ rootMemberDecoder =
 
 
 rootMemberOrderReportsItemDecoder : Json.Decode.Decoder RootMemberOrderReports
-rootMemberOrderReportsItemDecoder = 
+rootMemberOrderReportsItemDecoder =
     Json.Decode.oneOf
         [ Json.Decode.map RootMemberOrderReports0 <| rootMemberOrderReportsObjectDecoder
         , Json.Decode.map RootMemberOrderReports1 <| rootMemberOrderReportsMemberDecoder
@@ -156,9 +157,9 @@ rootMemberOrderReportsItemDecoder =
 
 
 rootMemberOrderReportsObjectDecoder : Json.Decode.Decoder RootMemberOrderReportsObject
-rootMemberOrderReportsObjectDecoder = 
+rootMemberOrderReportsObjectDecoder =
     let
-        fieldSet0 = 
+        fieldSet0 =
             Json.Decode.map8 RootMemberOrderReportsObject
                 (Json.Decode.field "clientOrderId" Json.Decode.string)
                 (Json.Decode.field "cummulativeQuoteQty" Json.Decode.string)
@@ -181,9 +182,9 @@ rootMemberOrderReportsObjectDecoder =
 
 
 rootMemberOrderReportsMemberDecoder : Json.Decode.Decoder RootMemberOrderReportsMember
-rootMemberOrderReportsMemberDecoder = 
+rootMemberOrderReportsMemberDecoder =
     let
-        fieldSet0 = 
+        fieldSet0 =
             Json.Decode.map8 RootMemberOrderReportsMember
                 (Json.Decode.field "clientOrderId" Json.Decode.string)
                 (Json.Decode.field "cummulativeQuoteQty" Json.Decode.string)
@@ -205,7 +206,7 @@ rootMemberOrderReportsMemberDecoder =
 
 
 rootMemberOrdersObjectDecoder : Json.Decode.Decoder RootMemberOrdersObject
-rootMemberOrdersObjectDecoder = 
+rootMemberOrdersObjectDecoder =
     Json.Decode.map3 RootMemberOrdersObject
         (Json.Decode.field "clientOrderId" Json.Decode.string)
         (Json.Decode.field "orderId" Json.Decode.int)
@@ -228,7 +229,7 @@ encodedRootItem root =
 
 
 encodedRootObject : RootObject -> Json.Encode.Value
-encodedRootObject rootObject = 
+encodedRootObject rootObject =
     Json.Encode.object
         [ ( "clientOrderId", Json.Encode.string rootObject.clientOrderId )
         , ( "cummulativeQuoteQty", Json.Encode.string rootObject.cummulativeQuoteQty )
@@ -247,7 +248,7 @@ encodedRootObject rootObject =
 
 
 encodedRootMember : RootMember -> Json.Encode.Value
-encodedRootMember rootMember = 
+encodedRootMember rootMember =
     Json.Encode.object
         [ ( "contingencyType", Json.Encode.string rootMember.contingencyType )
         , ( "listClientOrderId", Json.Encode.string rootMember.listClientOrderId )
@@ -272,7 +273,7 @@ encodedRootMemberOrderReportsItem rootMemberOrderReports =
 
 
 encodedRootMemberOrderReportsObject : RootMemberOrderReportsObject -> Json.Encode.Value
-encodedRootMemberOrderReportsObject rootMemberOrderReportsObject = 
+encodedRootMemberOrderReportsObject rootMemberOrderReportsObject =
     Json.Encode.object
         [ ( "clientOrderId", Json.Encode.string rootMemberOrderReportsObject.clientOrderId )
         , ( "cummulativeQuoteQty", Json.Encode.string rootMemberOrderReportsObject.cummulativeQuoteQty )
@@ -293,7 +294,7 @@ encodedRootMemberOrderReportsObject rootMemberOrderReportsObject =
 
 
 encodedRootMemberOrderReportsMember : RootMemberOrderReportsMember -> Json.Encode.Value
-encodedRootMemberOrderReportsMember rootMemberOrderReportsMember = 
+encodedRootMemberOrderReportsMember rootMemberOrderReportsMember =
     Json.Encode.object
         [ ( "clientOrderId", Json.Encode.string rootMemberOrderReportsMember.clientOrderId )
         , ( "cummulativeQuoteQty", Json.Encode.string rootMemberOrderReportsMember.cummulativeQuoteQty )
@@ -313,7 +314,7 @@ encodedRootMemberOrderReportsMember rootMemberOrderReportsMember =
 
 
 encodedRootMemberOrdersObject : RootMemberOrdersObject -> Json.Encode.Value
-encodedRootMemberOrdersObject rootMemberOrdersObject = 
+encodedRootMemberOrdersObject rootMemberOrdersObject =
     Json.Encode.object
         [ ( "clientOrderId", Json.Encode.string rootMemberOrdersObject.clientOrderId )
         , ( "orderId", Json.Encode.int rootMemberOrdersObject.orderId )

@@ -253,7 +253,8 @@ handleEndpointJson :
     -> ( RPCResult, BackendModel, Cmd msg )
 handleEndpointJson fn args model =
     let
-        _ = Debug.log "body" args
+        _ =
+            Debug.log "body" args
     in
     case args.body of
         JSON json ->

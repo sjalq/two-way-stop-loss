@@ -4,6 +4,7 @@ import Json.Decode
 import Json.Encode
 
 
+
 -- Required packages:
 -- * elm/json
 
@@ -32,9 +33,9 @@ type alias RootBalancesObject =
 
 
 rootDecoder : Json.Decode.Decoder Root
-rootDecoder = 
+rootDecoder =
     let
-        fieldSet0 = 
+        fieldSet0 =
             Json.Decode.map8 Root
                 (Json.Decode.field "accountType" Json.Decode.string)
                 (Json.Decode.field "balances" <| Json.Decode.list rootBalancesObjectDecoder)
@@ -54,7 +55,7 @@ rootDecoder =
 
 
 rootBalancesObjectDecoder : Json.Decode.Decoder RootBalancesObject
-rootBalancesObjectDecoder = 
+rootBalancesObjectDecoder =
     Json.Decode.map3 RootBalancesObject
         (Json.Decode.field "asset" Json.Decode.string)
         (Json.Decode.field "free" Json.Decode.string)
@@ -62,7 +63,7 @@ rootBalancesObjectDecoder =
 
 
 encodedRoot : Root -> Json.Encode.Value
-encodedRoot root = 
+encodedRoot root =
     Json.Encode.object
         [ ( "accountType", Json.Encode.string root.accountType )
         , ( "balances", Json.Encode.list encodedRootBalancesObject root.balances )
@@ -80,7 +81,7 @@ encodedRoot root =
 
 
 encodedRootBalancesObject : RootBalancesObject -> Json.Encode.Value
-encodedRootBalancesObject rootBalancesObject = 
+encodedRootBalancesObject rootBalancesObject =
     Json.Encode.object
         [ ( "asset", Json.Encode.string rootBalancesObject.asset )
         , ( "free", Json.Encode.string rootBalancesObject.free )
